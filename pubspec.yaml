@@ -10,6 +10,8 @@ dependencies:
   shared_preferences: ^2.0.13
   highlight: ^0.7.0
   flutter_highlight: ^0.7.0
+  flutter_inappwebview: ^6.1.5
+  flutter_js: ^0.8.5
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -21,3 +23,5 @@ flutter:
     - family: RobotoMono
       fonts:
         - asset: assets/fonts/RobotoMono-Regular.ttf
+  assets:
+    - assets/highlighter/

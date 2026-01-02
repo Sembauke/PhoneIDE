@@ -2,7 +2,8 @@
     package="org.freecodecamp.phone_ide">
    <application
         android:label="flutter_code_editor"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
             android:launchMode="singleTop"
