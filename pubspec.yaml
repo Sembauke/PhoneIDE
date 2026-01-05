@@ -8,10 +8,7 @@ dependencies:
   flutter:
     sdk: flutter
   shared_preferences: ^2.0.13
-  highlight: ^0.7.0
-  flutter_highlight: ^0.7.0
-  flutter_inappwebview: ^6.1.5
-  flutter_js: ^0.8.5
+  syntax_highlight: ^0.5.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
