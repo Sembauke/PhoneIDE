@@ -18,7 +18,8 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/autocomplete/suggestions.json
+    - assets/autocomplete/html_suggestions.json
+    - assets/autocomplete/css_suggestions.json
     - assets/autocomplete/javascript_objects.generated.json
   fonts:
     - family: RobotoMono

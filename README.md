@@ -49,9 +49,10 @@ void main() {
 - **enableSimpleAutocomplete** (`bool`, in `EditorOptions`): Enables lightweight built-in HTML/CSS/JS suggestions.
 - **maxAutocompleteSuggestions** (`int`, in `EditorOptions`): Caps how many suggestions are shown in the dropdown.
 - **autocompleteAssetPath** (`String`, in `EditorOptions`): JSON asset used for autocomplete suggestions.
-  When this is the default bundled path (`packages/phone_ide/assets/autocomplete/suggestions.json`),
-  the editor also merges `packages/phone_ide/assets/autocomplete/javascript_objects.generated.json`
-  for JavaScript object-member completions.
+  Default is `packages/phone_ide/assets/autocomplete/javascript_objects.generated.json`.
+  The editor also merges:
+  - `packages/phone_ide/assets/autocomplete/html_suggestions.json`
+  - `packages/phone_ide/assets/autocomplete/css_suggestions.json`
 
 ## Customizing the Editor
 
@@ -66,7 +67,7 @@ EditorOptions(
   enableSimpleAutocomplete: true,
   maxAutocompleteSuggestions: 8,
   autocompleteAssetPath:
-      'packages/phone_ide/assets/autocomplete/suggestions.json',
+      'packages/phone_ide/assets/autocomplete/javascript_objects.generated.json',
 );
 ```
 
@@ -74,15 +75,17 @@ EditorOptions(
 
 Autocomplete suggestions can be defined in an asset JSON file.
 
-Default file:
-`packages/phone_ide/assets/autocomplete/suggestions.json`
+Bundled files:
+- `packages/phone_ide/assets/autocomplete/html_suggestions.json`
+- `packages/phone_ide/assets/autocomplete/css_suggestions.json`
+- `packages/phone_ide/assets/autocomplete/javascript_objects.generated.json`
 
 Supported fields per suggestion item:
 - `value` (required): primary token used for matching.
 - `label` (optional): text shown in the dropdown.
 - `insertText` (optional): inserted text when tapped.
-- `category` (optional): right-side metadata text.
-- `detail` (optional): overrides category in the UI.
+- `category` (optional): suggestion classification (used for filtering/ranking).
+- `detail` (optional): optional extra metadata.
 - `language` (optional): `html`, `css`, or `javascript`.
 - `previewColor` (optional): hex color (for swatch).
 - `priority` (optional): base ranking boost.
@@ -128,13 +131,7 @@ For object-aware completions (for example `console.` -> `log`, `error`), the par
 }
 ```
 
-You can generate a starter schema from `@types/web`:
-
-```bash
-dart run tool/generate_dom_object_schema.dart --min-members=2
-```
-
-Generated file:
+JavaScript object-member schema lives in:
 `assets/autocomplete/javascript_objects.generated.json`
 
 ## Listening to Text Changes

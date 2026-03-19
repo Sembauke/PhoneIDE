@@ -56,9 +56,32 @@ void main() {
 
   group('matchAutocompleteSuggestions', () {
     test('matches orange suggestions with prefix search', () {
+      const List<AutocompleteSuggestion> suggestions = <AutocompleteSuggestion>[
+        AutocompleteSuggestion(
+          value: 'orange',
+          category: 'CSS color',
+          language: AutocompleteLanguage.css,
+        ),
+        AutocompleteSuggestion(
+          value: 'orangered',
+          category: 'CSS color',
+          language: AutocompleteLanguage.css,
+        ),
+        AutocompleteSuggestion(
+          value: 'orchid',
+          category: 'CSS color',
+          language: AutocompleteLanguage.css,
+        ),
+        AutocompleteSuggestion(
+          value: 'const',
+          category: 'JavaScript keyword',
+          language: AutocompleteLanguage.javascript,
+        ),
+      ];
+
       final List<AutocompleteSuggestion> matches = matchAutocompleteSuggestions(
         token: 'ora',
-        suggestions: kEditorAutocompleteSuggestions,
+        suggestions: suggestions,
         maxSuggestions: 6,
       );
 
@@ -69,9 +92,34 @@ void main() {
     });
 
     test('returns empty list when there are no matches', () {
+      const List<AutocompleteSuggestion> suggestions = <AutocompleteSuggestion>[
+        AutocompleteSuggestion(
+          value: 'orange',
+          category: 'CSS color',
+        ),
+        AutocompleteSuggestion(
+          value: 'const',
+          category: 'JavaScript keyword',
+        ),
+      ];
       final List<AutocompleteSuggestion> matches = matchAutocompleteSuggestions(
         token: 'zzzz',
-        suggestions: kEditorAutocompleteSuggestions,
+        suggestions: suggestions,
+        maxSuggestions: 6,
+      );
+
+      expect(matches, isEmpty);
+    });
+
+    test('hides suggestion when token exactly matches value', () {
+      final List<AutocompleteSuggestion> matches = matchAutocompleteSuggestions(
+        token: 'console',
+        suggestions: const <AutocompleteSuggestion>[
+          AutocompleteSuggestion(
+            value: 'console',
+            category: 'JavaScript global',
+          ),
+        ],
         maxSuggestions: 6,
       );
 
@@ -116,6 +164,34 @@ void main() {
       expect(matches.length, 1);
       expect(matches.first.value, 'console');
     });
+
+    test(
+      'keeps non-dotted suggestions even when they have dot-context regex',
+      () {
+        final List<AutocompleteSuggestion> matches =
+            matchAutocompleteSuggestions(
+          token: 'que',
+          suggestions: <AutocompleteSuggestion>[
+            AutocompleteSuggestion(
+              value: 'querySelector',
+              category: 'JavaScript DOM API',
+              whenPattern: r'document\.[A-Za-z_]*$',
+              whenRegex: RegExp(r'document\.[A-Za-z_]*$'),
+              whenBoost: 80,
+            ),
+            const AutocompleteSuggestion(
+              value: 'console.clear',
+              category: 'console member',
+            ),
+          ],
+          maxSuggestions: 6,
+          contextBeforeCaret: 'que',
+        );
+
+        expect(matches.length, 1);
+        expect(matches.first.value, 'querySelector');
+      },
+    );
 
     test('boosts regex-matching suggestions with context', () {
       final List<AutocompleteSuggestion> matches = matchAutocompleteSuggestions(
@@ -217,6 +293,23 @@ void main() {
 
       expect(matches.length, 1);
       expect(matches.first.label, 'console.clear');
+    });
+
+    test('hides member suggestion when token exactly matches member tail', () {
+      final List<AutocompleteSuggestion> matches = matchAutocompleteSuggestions(
+        token: 'log',
+        suggestions: const <AutocompleteSuggestion>[
+          AutocompleteSuggestion(
+            value: 'console.log',
+            label: 'console.log',
+            category: 'console member',
+          ),
+        ],
+        maxSuggestions: 4,
+        contextBeforeCaret: 'console.log',
+      );
+
+      expect(matches, isEmpty);
     });
   });
 

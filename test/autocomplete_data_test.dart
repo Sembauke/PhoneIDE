@@ -141,17 +141,23 @@ void main() {
   });
 
   group('loadAutocompleteSuggestionsFromAsset', () {
-    test('merges bundled JS object schema with default suggestions asset',
+    test('loads html/css/js assets from static language files',
         () async {
-      const String baseSuggestions = r'''
+      const String htmlSuggestions = r'''
 {
   "languages": {
-    "javascript": [
-      { "value": "let", "category": "JavaScript keyword" },
-      { "value": "console.log", "category": "JavaScript snippet" }
-    ],
+    "html": [
+      { "value": "div", "category": "HTML tag" }
+    ]
+  }
+}
+''';
+
+      const String cssSuggestions = r'''
+{
+  "languages": {
     "css": [
-      { "value": "color", "category": "CSS property" }
+      { "value": "orange", "category": "CSS color", "previewColor": "#ffa500" }
     ]
   }
 }
@@ -159,6 +165,11 @@ void main() {
 
       const String objectSchema = r'''
 {
+  "languages": {
+    "javascript": [
+      { "value": "let", "category": "JavaScript keyword" }
+    ]
+  },
   "objects": {
     "javascript": {
       "console": {
@@ -173,7 +184,8 @@ void main() {
 
       final _MapAssetBundle bundle = _MapAssetBundle(
         <String, String>{
-          kDefaultAutocompleteAssetPath: baseSuggestions,
+          kDefaultHtmlSuggestionsAssetPath: htmlSuggestions,
+          kDefaultCssSuggestionsAssetPath: cssSuggestions,
           kDefaultJavascriptObjectsAssetPath: objectSchema,
         },
       );
@@ -186,6 +198,10 @@ void main() {
 
       expect(
           loaded.any((AutocompleteSuggestion e) => e.value == 'let'), isTrue);
+      expect(
+          loaded.any((AutocompleteSuggestion e) => e.value == 'div'), isTrue);
+      expect(loaded.any((AutocompleteSuggestion e) => e.value == 'orange'),
+          isTrue);
       expect(
         loaded.any(
           (AutocompleteSuggestion e) =>

@@ -5,6 +5,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:phone_ide/controller/custom_text_controller.dart';
 import 'package:phone_ide/editor/autocomplete_data.dart';
+import 'package:phone_ide/editor/autocomplete_dropdown.dart';
 import 'package:phone_ide/editor/autocomplete_utils.dart';
 import 'package:phone_ide/editor/editor_options.dart';
 import 'package:phone_ide/editor/linebar.dart';
@@ -47,13 +48,15 @@ class Editor extends StatefulWidget {
 }
 
 class EditorState extends State<Editor> {
-  static const double _dropdownMinWidth = 220;
-  static const double _dropdownMaxWidth = 360;
+  static const double _dropdownMinWidth = 120;
+  static const double _dropdownMaxWidth = 280;
   static const double _dropdownMaxHeight = 240;
   static const double _dropdownEdgePadding = 8;
   static const double _dropdownVerticalGap = 6;
-  static const double _dropdownItemHeight = 44;
-  static const double _dropdownVerticalPadding = 12;
+  static const double _dropdownItemHeight = 40;
+  static const double _dropdownVerticalPadding = 10;
+  static const Duration _autocompleteCommitNewlineGuardDuration =
+      Duration(milliseconds: 180);
 
   ScrollController scrollController = ScrollController();
   ScrollController horizontalController = ScrollController();
@@ -62,9 +65,9 @@ class EditorState extends State<Editor> {
   TextEditingControllerIDE beforeController = TextEditingControllerIDE();
   TextEditingControllerIDE inController = TextEditingControllerIDE();
   TextEditingControllerIDE afterController = TextEditingControllerIDE();
-  FocusNode beforeFocusNode = FocusNode();
-  FocusNode inFocusNode = FocusNode();
-  FocusNode afterFocusNode = FocusNode();
+  late final FocusNode beforeFocusNode;
+  late final FocusNode inFocusNode;
+  late final FocusNode afterFocusNode;
 
   late StreamSubscription<TextFieldData> _textfieldDataSub;
 
@@ -83,10 +86,18 @@ class EditorState extends State<Editor> {
   double _autocompleteTop = 12;
   Size? _autocompleteViewportSize;
   bool _isInteractingWithAutocomplete = false;
+  int _highlightedAutocompleteIndex = 0;
+  String? _activeMemberObjectName;
+  bool _autocompleteKeyboardFocused = false;
+  bool _autocompleteSuppressedByEscape = false;
+  RegionPosition? _autocompleteCommitNewlineGuardRegion;
+  DateTime? _autocompleteCommitNewlineGuardUntil;
+  bool _pendingFormatterAutocompleteAccept = false;
 
   @override
   void initState() {
     super.initState();
+    _initFocusNodes();
     handleFileInit();
     _attachFocusListeners();
     _loadAutocompleteSuggestions();
@@ -106,6 +117,21 @@ class EditorState extends State<Editor> {
     horizontalController.addListener(() {
       _refreshAutocompletePosition();
     });
+  }
+
+  void _initFocusNodes() {
+    beforeFocusNode = FocusNode(
+      onKeyEvent: (_, KeyEvent event) =>
+          _handleAutocompleteKeyEvent(event, RegionPosition.before),
+    );
+    inFocusNode = FocusNode(
+      onKeyEvent: (_, KeyEvent event) =>
+          _handleAutocompleteKeyEvent(event, RegionPosition.inner),
+    );
+    afterFocusNode = FocusNode(
+      onKeyEvent: (_, KeyEvent event) =>
+          _handleAutocompleteKeyEvent(event, RegionPosition.after),
+    );
   }
 
   @override
@@ -428,6 +454,15 @@ class EditorState extends State<Editor> {
     _activeRegion = position;
     if (refreshAutocomplete) {
       _updateAutocompleteSuggestions(position);
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) {
+          return;
+        }
+
+        if (_focusNodeForRegion(position).hasFocus) {
+          _updateAutocompleteSuggestions(position);
+        }
+      });
     }
   }
 
@@ -520,6 +555,121 @@ class EditorState extends State<Editor> {
     return estimatedHeight.clamp(_dropdownItemHeight, _dropdownMaxHeight);
   }
 
+  String? _memberObjectNameFromContext(String contextBeforeCaret) {
+    if (contextBeforeCaret.isEmpty) {
+      return null;
+    }
+
+    final RegExp trailingMemberPattern =
+        RegExp(r'([A-Za-z_$][A-Za-z0-9_$]*)\.([A-Za-z0-9_#$-]*)$');
+    final RegExpMatch? match =
+        trailingMemberPattern.firstMatch(contextBeforeCaret);
+    if (match == null) {
+      return null;
+    }
+
+    final String? objectName = match.group(1);
+    if (objectName == null || objectName.isEmpty) {
+      return null;
+    }
+
+    return objectName;
+  }
+
+  double _measureSingleLineTextWidth(String text, TextStyle style) {
+    if (text.isEmpty) {
+      return 0;
+    }
+
+    final TextPainter textPainter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      maxLines: 1,
+      textDirection: Directionality.of(context),
+    )..layout();
+
+    return textPainter.width;
+  }
+
+  double _estimatedDropdownWidth(Size viewportSize) {
+    const TextStyle labelStyle = TextStyle(
+      fontSize: 12.5,
+      fontWeight: FontWeight.w500,
+      letterSpacing: 0.1,
+    );
+
+    double maxRowWidth = 0;
+    for (final AutocompleteSuggestion suggestion in _activeSuggestions) {
+      final String displayLabel = _displayLabelForSuggestion(suggestion);
+      final double labelWidth =
+          _measureSingleLineTextWidth(displayLabel, labelStyle);
+      final double rowWidth = 20 + // row horizontal padding
+          20 + // icon slot + spacing
+          labelWidth +
+          8; // right breathing room
+      if (rowWidth > maxRowWidth) {
+        maxRowWidth = rowWidth;
+      }
+    }
+
+    final double contentEstimate = maxRowWidth + 4; // borders/safe slop
+    final double viewportCap = (viewportSize.width - (_dropdownEdgePadding * 2))
+        .clamp(120.0, _dropdownMaxWidth)
+        .toDouble();
+    final double maxAllowed =
+        (viewportSize.width * 0.76).clamp(140.0, viewportCap).toDouble();
+    final double minAllowed =
+        _dropdownMinWidth > maxAllowed ? maxAllowed : _dropdownMinWidth;
+
+    return contentEstimate.clamp(minAllowed, maxAllowed).toDouble();
+  }
+
+  String _displayLabelForSuggestion(AutocompleteSuggestion suggestion) {
+    final String? objectName = _activeMemberObjectName;
+    if (objectName == null || objectName.isEmpty) {
+      return suggestion.label;
+    }
+
+    final String objectPrefix = '$objectName.';
+    final String normalizedPrefix = objectPrefix.toLowerCase();
+    final String label = suggestion.label;
+    final String normalizedLabel = label.toLowerCase();
+    if (!normalizedLabel.startsWith(normalizedPrefix)) {
+      return label;
+    }
+
+    final String tail = label.substring(objectPrefix.length);
+    String insertion = suggestion.insertText ?? suggestion.value;
+    final String normalizedInsertion = insertion.toLowerCase();
+    if (normalizedInsertion.startsWith(normalizedPrefix) &&
+        insertion.length > objectPrefix.length) {
+      insertion = insertion.substring(objectPrefix.length);
+    }
+
+    if (insertion.startsWith(tail)) {
+      return '.$insertion';
+    }
+
+    return '.$tail';
+  }
+
+  String _replacementTextForSuggestion(AutocompleteSuggestion suggestion) {
+    String replacement = suggestion.insertText ?? suggestion.value;
+    final String? objectName = _activeMemberObjectName;
+    if (objectName == null || objectName.isEmpty) {
+      return replacement;
+    }
+
+    final String objectPrefix = '$objectName.';
+    final String normalizedReplacement = replacement.toLowerCase();
+    final String normalizedPrefix = objectPrefix.toLowerCase();
+    if (normalizedReplacement.startsWith(normalizedPrefix) &&
+        replacement.length > objectPrefix.length) {
+      return replacement.substring(objectPrefix.length);
+    }
+
+    return replacement;
+  }
+
   double _estimatedEditorLineHeight() {
     final double glyphHeight = getTextHeight(context);
     final double fontSize = getFontSize(context, fontSize: 18);
@@ -573,9 +723,10 @@ class EditorState extends State<Editor> {
     final double viewportWidth = viewportSize.width;
     final double viewportHeight = viewportSize.height;
     final double dropdownHeight = _estimatedDropdownHeight(suggestionCount);
+    final double dropdownWidth = _estimatedDropdownWidth(viewportSize);
 
     final double maxLeft =
-        (viewportWidth - _dropdownMinWidth - _dropdownEdgePadding)
+        (viewportWidth - dropdownWidth - _dropdownEdgePadding)
             .clamp(_dropdownEdgePadding, double.infinity)
             .toDouble();
     left = left.clamp(_dropdownEdgePadding, maxLeft).toDouble();
@@ -647,24 +798,34 @@ class EditorState extends State<Editor> {
       return;
     }
 
-    final TextEditingControllerIDE controller = _controllerForRegion(position);
-    final TextSelection selection = controller.selection;
-
-    if (!selection.isValid || !selection.isCollapsed) {
+    if (_autocompleteSuppressedByEscape) {
       _hideAutocomplete();
       return;
     }
 
+    final TextEditingControllerIDE controller = _controllerForRegion(position);
+    final TextSelection selection = controller.selection;
+    final String text = controller.text;
+
+    final bool hasExplicitRangeSelection = selection.isValid &&
+        !selection.isCollapsed &&
+        selection.start >= 0 &&
+        selection.end >= 0;
+    if (hasExplicitRangeSelection) {
+      _hideAutocomplete();
+      return;
+    }
+
+    final int caretOffset = _safeCaretOffset(selection, text);
     AutocompleteTokenMatch? tokenMatch = extractAutocompleteToken(
-      text: controller.text,
-      caretOffset: selection.extentOffset,
+      text: text,
+      caretOffset: caretOffset,
     );
 
     if (tokenMatch == null &&
-        selection.extentOffset > 0 &&
-        selection.extentOffset <= controller.text.length &&
-        controller.text[selection.extentOffset - 1] == '.') {
-      final int caretOffset = selection.extentOffset;
+        caretOffset > 0 &&
+        caretOffset <= text.length &&
+        text[caretOffset - 1] == '.') {
       tokenMatch = AutocompleteTokenMatch(
         token: '',
         range: TextRange(start: caretOffset, end: caretOffset),
@@ -677,14 +838,16 @@ class EditorState extends State<Editor> {
     }
 
     final String contextBeforeCaret = _contextWindowBeforeCaret(
-      controller.text,
-      selection.extentOffset,
+      text,
+      caretOffset,
     );
 
     final List<AutocompleteSuggestion> matches = matchAutocompleteSuggestions(
       token: tokenMatch.token,
       suggestions: _suggestionsForCurrentFile(),
-      maxSuggestions: widget.options.maxAutocompleteSuggestions,
+      maxSuggestions: widget.options.maxAutocompleteSuggestions < 1
+          ? 1
+          : widget.options.maxAutocompleteSuggestions,
       contextBeforeCaret: contextBeforeCaret,
     );
 
@@ -694,11 +857,16 @@ class EditorState extends State<Editor> {
     }
 
     final TextRange tokenRange = tokenMatch.range;
+    final String? memberObjectName =
+        _memberObjectNameFromContext(contextBeforeCaret);
     setState(() {
       _activeRegion = position;
       _activeTokenRange = tokenRange;
       _activeSuggestions = matches;
       _showAutocomplete = true;
+      _highlightedAutocompleteIndex = 0;
+      _activeMemberObjectName = memberObjectName;
+      _autocompleteKeyboardFocused = false;
       final Offset offset = _calculateAutocompleteOffset(
         position,
         tokenRange,
@@ -707,6 +875,22 @@ class EditorState extends State<Editor> {
       _autocompleteLeft = offset.dx;
       _autocompleteTop = offset.dy;
     });
+  }
+
+  int _safeCaretOffset(TextSelection selection, String text) {
+    final int length = text.length;
+
+    final int extentOffset = selection.extentOffset;
+    if (extentOffset >= 0 && extentOffset <= length) {
+      return extentOffset;
+    }
+
+    final int baseOffset = selection.baseOffset;
+    if (baseOffset >= 0 && baseOffset <= length) {
+      return baseOffset;
+    }
+
+    return length;
   }
 
   String _contextWindowBeforeCaret(String text, int caretOffset) {
@@ -732,6 +916,9 @@ class EditorState extends State<Editor> {
       _activeTokenRange = null;
       _activeSuggestions = const [];
       _showAutocomplete = false;
+      _highlightedAutocompleteIndex = 0;
+      _activeMemberObjectName = null;
+      _autocompleteKeyboardFocused = false;
     });
   }
 
@@ -741,6 +928,187 @@ class EditorState extends State<Editor> {
         _showAutocomplete &&
         _activeTokenRange != null &&
         _activeSuggestions.isNotEmpty;
+  }
+
+  KeyEventResult _handleAutocompleteKeyEvent(
+    KeyEvent event,
+    RegionPosition position,
+  ) {
+    final bool isDownOrRepeat =
+        event is KeyDownEvent || event is KeyRepeatEvent;
+    if (!isDownOrRepeat) {
+      return KeyEventResult.ignored;
+    }
+
+    final LogicalKeyboardKey key = event.logicalKey;
+    final bool isEscapeKey = _isEscapeDismissKey(key);
+    if (_autocompleteSuppressedByEscape) {
+      if (key == LogicalKeyboardKey.enter ||
+          key == LogicalKeyboardKey.numpadEnter ||
+          key == LogicalKeyboardKey.space) {
+        setState(() {
+          _autocompleteSuppressedByEscape = false;
+        });
+        return KeyEventResult.ignored;
+      }
+
+      if (isEscapeKey) {
+        return KeyEventResult.handled;
+      }
+    }
+
+    if (isEscapeKey && _shouldShowAutocomplete() && position == _activeRegion) {
+      _dismissAutocompleteFromKeyboard();
+      return KeyEventResult.handled;
+    }
+
+    if (!_shouldShowAutocomplete() || position != _activeRegion) {
+      return KeyEventResult.ignored;
+    }
+
+    if (key == LogicalKeyboardKey.tab) {
+      _focusAutocompleteFromKeyboard();
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.arrowDown) {
+      _moveAutocompleteSelection(1);
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.arrowUp) {
+      _moveAutocompleteSelection(-1);
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter) {
+      _armAutocompleteCommitNewlineGuard(position);
+      _acceptAutocompleteSelection();
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  bool _isEscapeDismissKey(LogicalKeyboardKey key) {
+    return key == LogicalKeyboardKey.escape ||
+        key == LogicalKeyboardKey.goBack ||
+        key == LogicalKeyboardKey.browserBack ||
+        key == LogicalKeyboardKey.navigatePrevious ||
+        key == LogicalKeyboardKey.exit;
+  }
+
+  void _dismissAutocompleteFromKeyboard() {
+    if (!_shouldShowAutocomplete()) {
+      return;
+    }
+    setState(() {
+      _autocompleteSuppressedByEscape = true;
+    });
+    _hideAutocomplete();
+  }
+
+  void _armAutocompleteCommitNewlineGuard(RegionPosition position) {
+    _autocompleteCommitNewlineGuardRegion = position;
+    _autocompleteCommitNewlineGuardUntil =
+        DateTime.now().add(_autocompleteCommitNewlineGuardDuration);
+  }
+
+  bool _consumeAutocompleteCommitNewlineGuardIfActive(RegionPosition position) {
+    if (_autocompleteCommitNewlineGuardRegion != position) {
+      return false;
+    }
+
+    final DateTime? until = _autocompleteCommitNewlineGuardUntil;
+    if (until == null || DateTime.now().isAfter(until)) {
+      _clearAutocompleteCommitNewlineGuard(position);
+      return false;
+    }
+
+    _clearAutocompleteCommitNewlineGuard(position);
+    return true;
+  }
+
+  void _clearAutocompleteCommitNewlineGuard(RegionPosition position) {
+    if (_autocompleteCommitNewlineGuardRegion != position) {
+      return;
+    }
+    _autocompleteCommitNewlineGuardRegion = null;
+    _autocompleteCommitNewlineGuardUntil = null;
+  }
+
+  bool _shouldBlockAutocompleteNewline(RegionPosition position) {
+    if (_shouldShowAutocomplete() && _activeRegion == position) {
+      return true;
+    }
+
+    return _consumeAutocompleteCommitNewlineGuardIfActive(position);
+  }
+
+  void _handleBlockedAutocompleteNewline(RegionPosition position) {
+    if (!_shouldShowAutocomplete() || _activeRegion != position) {
+      return;
+    }
+
+    if (_pendingFormatterAutocompleteAccept) {
+      return;
+    }
+
+    _pendingFormatterAutocompleteAccept = true;
+    _armAutocompleteCommitNewlineGuard(position);
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      _pendingFormatterAutocompleteAccept = false;
+      if (!mounted) {
+        return;
+      }
+
+      if (!_shouldShowAutocomplete() || _activeRegion != position) {
+        return;
+      }
+
+      _acceptAutocompleteSelection();
+    });
+  }
+
+  void _focusAutocompleteFromKeyboard() {
+    if (!_shouldShowAutocomplete()) {
+      return;
+    }
+    setState(() {
+      _autocompleteKeyboardFocused = true;
+    });
+  }
+
+  void _moveAutocompleteSelection(int delta) {
+    if (!_shouldShowAutocomplete()) {
+      return;
+    }
+    final int suggestionCount = _activeSuggestions.length;
+    if (suggestionCount <= 0) {
+      return;
+    }
+    setState(() {
+      _autocompleteKeyboardFocused = true;
+      _highlightedAutocompleteIndex =
+          (_highlightedAutocompleteIndex + delta + suggestionCount) %
+              suggestionCount;
+    });
+  }
+
+  void _acceptAutocompleteSelection() {
+    if (!_shouldShowAutocomplete()) {
+      return;
+    }
+    final int suggestionCount = _activeSuggestions.length;
+    if (suggestionCount <= 0) {
+      return;
+    }
+    final int safeIndex = _highlightedAutocompleteIndex.clamp(
+      0,
+      suggestionCount - 1,
+    );
+    _applySuggestion(_activeSuggestions[safeIndex]);
   }
 
   void _applySuggestion(AutocompleteSuggestion suggestion) {
@@ -760,7 +1128,7 @@ class EditorState extends State<Editor> {
     final TextEditingValue updatedValue = applyAutocompleteSuggestion(
       originalValue: controller.value,
       replaceRange: tokenRange,
-      replacement: suggestion.insertText ?? suggestion.value,
+      replacement: _replacementTextForSuggestion(suggestion),
     );
 
     controller.value = updatedValue;
@@ -775,101 +1143,33 @@ class EditorState extends State<Editor> {
 
   Widget _autocompleteDropdown() {
     final Size viewportSize = _editorViewportSize();
-    final double safeAvailableWidth =
-        (viewportSize.width - (_dropdownEdgePadding * 2))
-            .clamp(180, double.infinity)
-            .toDouble();
-    final double maxWidth = safeAvailableWidth
-        .clamp(_dropdownMinWidth, _dropdownMaxWidth)
-        .toDouble();
-    final double minWidth =
-        maxWidth < _dropdownMinWidth ? maxWidth : _dropdownMinWidth;
+    final double targetWidth = _estimatedDropdownWidth(viewportSize);
 
-    return Positioned(
+    return AutocompleteDropdown(
       left: _autocompleteLeft,
       top: _autocompleteTop,
-      child: Material(
-        elevation: 8,
-        color: const Color.fromRGBO(0x1f, 0x23, 0x2d, 1),
-        borderRadius: BorderRadius.circular(8),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            minWidth: minWidth,
-            maxWidth: maxWidth,
-            maxHeight: _dropdownMaxHeight,
-          ),
-          child: ListView.separated(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            shrinkWrap: true,
-            itemCount: _activeSuggestions.length,
-            separatorBuilder: (_, __) => const Divider(
-              height: 1,
-              color: Color.fromRGBO(0x2f, 0x34, 0x44, 1),
-            ),
-            itemBuilder: (_, index) {
-              final AutocompleteSuggestion suggestion =
-                  _activeSuggestions[index];
-              final String trailingText =
-                  suggestion.detail ?? suggestion.category;
-              return InkWell(
-                onTapDown: (_) {
-                  _isInteractingWithAutocomplete = true;
-                },
-                onTapCancel: () {
-                  _isInteractingWithAutocomplete = false;
-                  if (!beforeFocusNode.hasFocus &&
-                      !inFocusNode.hasFocus &&
-                      !afterFocusNode.hasFocus) {
-                    _hideAutocomplete();
-                  }
-                },
-                onTap: () => _applySuggestion(suggestion),
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  child: Row(
-                    children: [
-                      if (suggestion.previewColor != null)
-                        Container(
-                          width: 12,
-                          height: 12,
-                          margin: const EdgeInsets.only(right: 10),
-                          decoration: BoxDecoration(
-                            color: suggestion.previewColor,
-                            borderRadius: BorderRadius.circular(2),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.2),
-                            ),
-                          ),
-                        )
-                      else
-                        const SizedBox(width: 22),
-                      Expanded(
-                        child: Text(
-                          suggestion.label,
-                          style: const TextStyle(
-                            color: Color.fromRGBO(0xd8, 0xe7, 0xff, 1),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        trailingText,
-                        style: const TextStyle(
-                          color: Color.fromRGBO(0x92, 0x9f, 0xb6, 1),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ),
+      width: targetWidth,
+      maxHeight: _dropdownMaxHeight,
+      itemHeight: _dropdownItemHeight,
+      suggestions: _activeSuggestions,
+      highlightedIndex: _highlightedAutocompleteIndex,
+      showKeyboardFocusBorder: _autocompleteKeyboardFocused,
+      displayLabelBuilder: _displayLabelForSuggestion,
+      onSuggestionTap: _applySuggestion,
+      onSuggestionTapDown: (int index) {
+        setState(() {
+          _highlightedAutocompleteIndex = index;
+        });
+        _isInteractingWithAutocomplete = true;
+      },
+      onSuggestionTapCancel: () {
+        _isInteractingWithAutocomplete = false;
+        if (!beforeFocusNode.hasFocus &&
+            !inFocusNode.hasFocus &&
+            !afterFocusNode.hasFocus) {
+          _hideAutocomplete();
+        }
+      },
     );
   }
 
@@ -971,16 +1271,17 @@ class EditorState extends State<Editor> {
     );
   }
 
-  TextField editorField(
+  Widget editorField(
     BuildContext context,
     RegionPosition position,
   ) {
-    return TextField(
+    final TextField textField = TextField(
       smartQuotesType: SmartQuotesType.disabled,
       smartDashesType: SmartDashesType.disabled,
       enabled: widget.options.isEditable,
       controller: _controllerForRegion(position),
       focusNode: _focusNodeForRegion(position),
+      textInputAction: TextInputAction.newline,
       decoration: InputDecoration(
         border: InputBorder.none,
         filled: true,
@@ -1000,18 +1301,30 @@ class EditorState extends State<Editor> {
         color: Colors.white.withValues(alpha: 0.87),
       ),
       onChanged: (String event) => _handleEditorChanged(event, position),
+      onSubmitted: (_) {
+        if (!_shouldShowAutocomplete() || _activeRegion != position) {
+          return;
+        }
+        _armAutocompleteCommitNewlineGuard(position);
+        _acceptAutocompleteSelection();
+      },
       onTap: () {
         _activeRegion = position;
         handleCurrentFocusedTextfieldController(position);
         _updateAutocompleteSuggestions(position);
       },
       inputFormatters: [
+        _AutocompleteNewlineBlockFormatter(
+          shouldBlock: () => _shouldBlockAutocompleteNewline(position),
+          onBlocked: () => _handleBlockedAutocompleteNewline(position),
+        ),
         FilteringTextInputFormatter.deny(RegExp(r'[“”]'),
             replacementString: '"'),
         FilteringTextInputFormatter.deny(RegExp(r'[‘’]'),
             replacementString: "'")
       ],
     );
+    return textField;
   }
 
   linecountBar() {
@@ -1066,5 +1379,36 @@ class EditorState extends State<Editor> {
         )
       ],
     );
+  }
+}
+
+class _AutocompleteNewlineBlockFormatter extends TextInputFormatter {
+  _AutocompleteNewlineBlockFormatter({
+    required this.shouldBlock,
+    this.onBlocked,
+  });
+
+  final bool Function() shouldBlock;
+  final VoidCallback? onBlocked;
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (!shouldBlock()) {
+      return newValue;
+    }
+
+    final RegExp lineBreakPattern = RegExp(r'[\r\n]');
+    final int oldBreakCount = lineBreakPattern.allMatches(oldValue.text).length;
+    final int newBreakCount = lineBreakPattern.allMatches(newValue.text).length;
+
+    if (newBreakCount > oldBreakCount) {
+      onBlocked?.call();
+      return oldValue;
+    }
+
+    return newValue;
   }
 }

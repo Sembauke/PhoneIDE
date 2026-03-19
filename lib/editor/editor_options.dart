@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phone_ide/editor/autocomplete_data.dart';
 
 class EditorOptions {
   EditorOptions({
@@ -12,8 +13,7 @@ class EditorOptions {
     this.fontFamily,
     this.enableSimpleAutocomplete = false,
     this.maxAutocompleteSuggestions = 6,
-    this.autocompleteAssetPath =
-        'packages/phone_ide/assets/autocomplete/suggestions.json',
+    this.autocompleteAssetPath = kDefaultAutocompleteAssetPath,
   });
 
   // [backgroundColor] is the background color of the editor.

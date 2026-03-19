@@ -2,6 +2,41 @@
   "version": 1,
   "source": "https://unpkg.com/@types/web/index.d.ts",
   "generatedAt": "2026-03-19T10:06:18.769066Z",
+  "languages": {
+    "javascript": [
+      { "value": "const", "category": "JavaScript keyword" },
+      { "value": "let", "category": "JavaScript keyword" },
+      { "value": "var", "category": "JavaScript keyword" },
+      { "value": "function", "category": "JavaScript keyword" },
+      { "value": "return", "category": "JavaScript keyword" },
+      { "value": "if", "category": "JavaScript keyword" },
+      { "value": "else", "category": "JavaScript keyword" },
+      { "value": "for", "category": "JavaScript keyword" },
+      { "value": "while", "category": "JavaScript keyword" },
+      { "value": "switch", "category": "JavaScript keyword" },
+      { "value": "case", "category": "JavaScript keyword" },
+      { "value": "break", "category": "JavaScript keyword" },
+      { "value": "continue", "category": "JavaScript keyword" },
+      { "value": "try", "category": "JavaScript keyword" },
+      { "value": "catch", "category": "JavaScript keyword" },
+      { "value": "finally", "category": "JavaScript keyword" },
+      { "value": "async", "category": "JavaScript keyword" },
+      { "value": "await", "category": "JavaScript keyword" },
+      { "value": "class", "category": "JavaScript keyword" },
+      { "value": "new", "category": "JavaScript keyword" },
+      { "value": "this", "category": "JavaScript keyword" },
+      { "value": "console", "category": "JavaScript global" },
+      { "value": "document", "category": "JavaScript global" },
+      { "value": "window", "category": "JavaScript global" },
+      { "value": "setTimeout", "category": "JavaScript global" },
+      { "value": "setInterval", "category": "JavaScript global" },
+      { "value": "Promise", "category": "JavaScript global" },
+      { "value": "Array", "category": "JavaScript global" },
+      { "value": "Object", "category": "JavaScript global" },
+      { "value": "String", "category": "JavaScript global" },
+      { "value": "Number", "category": "JavaScript global" }
+    ]
+  },
   "objects": {
     "javascript": {
       "SVGMatrix": {

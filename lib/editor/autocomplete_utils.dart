@@ -114,16 +114,7 @@ bool _regexTargetsObject(String? pattern, String objectName) {
 }
 
 bool _isDotNotationSuggestion(AutocompleteSuggestion suggestion) {
-  if (suggestion.label.contains('.') || suggestion.value.contains('.')) {
-    return true;
-  }
-
-  final String? whenPattern = suggestion.whenPattern;
-  if (whenPattern == null || whenPattern.isEmpty) {
-    return false;
-  }
-
-  return whenPattern.contains(r'\.');
+  return suggestion.label.contains('.') || suggestion.value.contains('.');
 }
 
 bool _matchesMemberContextByLabel({
@@ -171,6 +162,49 @@ bool _matchesMemberToken({
       normalizedLabel.startsWith(normalizedToken);
 }
 
+bool _isExactTypedSuggestion({
+  required String normalizedToken,
+  required String normalizedValue,
+  required String normalizedLabel,
+  required String normalizedInsert,
+  required String? memberTail,
+  required String normalizedObjectPrefix,
+}) {
+  if (normalizedToken.isEmpty) {
+    return false;
+  }
+
+  if (memberTail != null && memberTail == normalizedToken) {
+    return true;
+  }
+
+  if (normalizedValue == normalizedToken ||
+      normalizedLabel == normalizedToken ||
+      normalizedInsert == normalizedToken) {
+    return true;
+  }
+
+  if (normalizedObjectPrefix.isNotEmpty) {
+    if (normalizedValue.startsWith(normalizedObjectPrefix) &&
+        normalizedValue.substring(normalizedObjectPrefix.length) ==
+            normalizedToken) {
+      return true;
+    }
+    if (normalizedLabel.startsWith(normalizedObjectPrefix) &&
+        normalizedLabel.substring(normalizedObjectPrefix.length) ==
+            normalizedToken) {
+      return true;
+    }
+    if (normalizedInsert.startsWith(normalizedObjectPrefix) &&
+        normalizedInsert.substring(normalizedObjectPrefix.length) ==
+            normalizedToken) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 List<AutocompleteSuggestion> matchAutocompleteSuggestions({
   required String token,
   required List<AutocompleteSuggestion> suggestions,
@@ -208,6 +242,8 @@ List<AutocompleteSuggestion> matchAutocompleteSuggestions({
         whenRegex.hasMatch(contextBeforeCaret);
     final String normalizedValue = suggestion.value.toLowerCase();
     final String normalizedLabel = suggestion.label.toLowerCase();
+    final String normalizedInsert =
+        (suggestion.insertText ?? suggestion.value).toLowerCase();
     final String? memberTail = memberContext == null
         ? null
         : _memberTailForContext(
@@ -243,6 +279,17 @@ List<AutocompleteSuggestion> matchAutocompleteSuggestions({
     if (memberContext == null &&
         !valueStartsWithToken &&
         !labelStartsWithToken) {
+      continue;
+    }
+
+    if (_isExactTypedSuggestion(
+      normalizedToken: normalizedToken,
+      normalizedValue: normalizedValue,
+      normalizedLabel: normalizedLabel,
+      normalizedInsert: normalizedInsert,
+      memberTail: memberTail,
+      normalizedObjectPrefix: normalizedObjectPrefix,
+    )) {
       continue;
     }
 

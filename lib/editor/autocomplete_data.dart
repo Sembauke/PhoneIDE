@@ -32,10 +32,13 @@ class AutocompleteSuggestion {
   final RegExp? whenRegex;
 }
 
-const String kDefaultAutocompleteAssetPath =
-    'packages/phone_ide/assets/autocomplete/suggestions.json';
 const String kDefaultJavascriptObjectsAssetPath =
     'packages/phone_ide/assets/autocomplete/javascript_objects.generated.json';
+const String kDefaultHtmlSuggestionsAssetPath =
+    'packages/phone_ide/assets/autocomplete/html_suggestions.json';
+const String kDefaultCssSuggestionsAssetPath =
+    'packages/phone_ide/assets/autocomplete/css_suggestions.json';
+const String kDefaultAutocompleteAssetPath = kDefaultJavascriptObjectsAssetPath;
 
 Future<List<AutocompleteSuggestion>> loadAutocompleteSuggestionsFromAsset({
   required String assetPath,
@@ -43,46 +46,25 @@ Future<List<AutocompleteSuggestion>> loadAutocompleteSuggestionsFromAsset({
 }) async {
   final AssetBundle activeBundle = bundle ?? rootBundle;
   final String requestedPath = assetPath.trim();
-  final bool useBundledObjectSchema =
-      requestedPath.isEmpty || requestedPath == kDefaultAutocompleteAssetPath;
-  final List<String> candidatePaths = <String>[
+  final Set<String> candidatePaths = <String>{
     if (requestedPath.isNotEmpty) requestedPath,
-    if (requestedPath != kDefaultAutocompleteAssetPath)
-      kDefaultAutocompleteAssetPath,
-  ];
+    kDefaultHtmlSuggestionsAssetPath,
+    kDefaultCssSuggestionsAssetPath,
+    kDefaultJavascriptObjectsAssetPath,
+  };
 
-  String? resolvedPath;
-  List<AutocompleteSuggestion> parsedBase = const <AutocompleteSuggestion>[];
+  final List<AutocompleteSuggestion> merged = <AutocompleteSuggestion>[];
+
   for (final String candidatePath in candidatePaths) {
     try {
       final String json = await activeBundle.loadString(candidatePath);
       final List<AutocompleteSuggestion> parsed =
           parseAutocompleteSuggestionsJson(json);
       if (parsed.isNotEmpty) {
-        resolvedPath = candidatePath;
-        parsedBase = parsed;
-        break;
+        merged.addAll(parsed);
       }
     } catch (_) {
-      // Fall through and try next candidate.
-    }
-  }
-
-  final List<AutocompleteSuggestion> merged = <AutocompleteSuggestion>[
-    ...parsedBase,
-  ];
-
-  if (useBundledObjectSchema || resolvedPath == kDefaultAutocompleteAssetPath) {
-    try {
-      final String jsObjectsJson =
-          await activeBundle.loadString(kDefaultJavascriptObjectsAssetPath);
-      final List<AutocompleteSuggestion> parsedObjectSchema =
-          parseAutocompleteSuggestionsJson(jsObjectsJson);
-      if (parsedObjectSchema.isNotEmpty) {
-        merged.addAll(parsedObjectSchema);
-      }
-    } catch (_) {
-      // Optional schema; keep base suggestions if unavailable.
+      // Optional source; keep suggestions gathered from available sources.
     }
   }
 
@@ -621,206 +603,26 @@ bool _isHtmlLanguage(String language) {
   return language == 'html' || language == 'htm' || language == 'xhtml';
 }
 
-const List<AutocompleteSuggestion> kEditorAutocompleteSuggestions = [
-  // HTML tags
-  AutocompleteSuggestion(value: 'html', category: 'HTML tag'),
-  AutocompleteSuggestion(value: 'head', category: 'HTML tag'),
-  AutocompleteSuggestion(value: 'body', category: 'HTML tag'),
-  AutocompleteSuggestion(value: 'div', category: 'HTML tag'),
-  AutocompleteSuggestion(value: 'span', category: 'HTML tag'),
-  AutocompleteSuggestion(value: 'h1', category: 'HTML tag'),
-  AutocompleteSuggestion(value: 'h2', category: 'HTML tag'),
-  AutocompleteSuggestion(value: 'h3', category: 'HTML tag'),
-  AutocompleteSuggestion(value: 'p', category: 'HTML tag'),
-  AutocompleteSuggestion(value: 'a', category: 'HTML tag'),
-  AutocompleteSuggestion(value: 'img', category: 'HTML tag'),
-  AutocompleteSuggestion(value: 'button', category: 'HTML tag'),
-  AutocompleteSuggestion(value: 'input', category: 'HTML tag'),
-  AutocompleteSuggestion(value: 'label', category: 'HTML tag'),
-  AutocompleteSuggestion(value: 'form', category: 'HTML tag'),
-  AutocompleteSuggestion(value: 'script', category: 'HTML tag'),
-  AutocompleteSuggestion(value: 'style', category: 'HTML tag'),
-  AutocompleteSuggestion(value: 'section', category: 'HTML tag'),
-  AutocompleteSuggestion(value: 'article', category: 'HTML tag'),
-  AutocompleteSuggestion(value: 'header', category: 'HTML tag'),
-  AutocompleteSuggestion(value: 'footer', category: 'HTML tag'),
-  AutocompleteSuggestion(value: 'main', category: 'HTML tag'),
-  AutocompleteSuggestion(value: 'nav', category: 'HTML tag'),
-  AutocompleteSuggestion(value: 'ul', category: 'HTML tag'),
-  AutocompleteSuggestion(value: 'ol', category: 'HTML tag'),
-  AutocompleteSuggestion(value: 'li', category: 'HTML tag'),
-  AutocompleteSuggestion(value: 'table', category: 'HTML tag'),
-  AutocompleteSuggestion(value: 'tr', category: 'HTML tag'),
-  AutocompleteSuggestion(value: 'td', category: 'HTML tag'),
-  AutocompleteSuggestion(value: 'th', category: 'HTML tag'),
-
-  // HTML attributes
-  AutocompleteSuggestion(value: 'class', category: 'HTML attribute'),
-  AutocompleteSuggestion(value: 'id', category: 'HTML attribute'),
-  AutocompleteSuggestion(value: 'href', category: 'HTML attribute'),
-  AutocompleteSuggestion(value: 'src', category: 'HTML attribute'),
-  AutocompleteSuggestion(value: 'alt', category: 'HTML attribute'),
-  AutocompleteSuggestion(value: 'title', category: 'HTML attribute'),
-  AutocompleteSuggestion(value: 'type', category: 'HTML attribute'),
-  AutocompleteSuggestion(value: 'name', category: 'HTML attribute'),
-  AutocompleteSuggestion(value: 'value', category: 'HTML attribute'),
-  AutocompleteSuggestion(value: 'placeholder', category: 'HTML attribute'),
-  AutocompleteSuggestion(value: 'disabled', category: 'HTML attribute'),
-  AutocompleteSuggestion(value: 'checked', category: 'HTML attribute'),
-  AutocompleteSuggestion(value: 'role', category: 'HTML attribute'),
-  AutocompleteSuggestion(value: 'aria-label', category: 'HTML attribute'),
-
-  // CSS properties
-  AutocompleteSuggestion(value: 'color', category: 'CSS property'),
-  AutocompleteSuggestion(value: 'background', category: 'CSS property'),
-  AutocompleteSuggestion(value: 'background-color', category: 'CSS property'),
-  AutocompleteSuggestion(value: 'font-size', category: 'CSS property'),
-  AutocompleteSuggestion(value: 'font-weight', category: 'CSS property'),
-  AutocompleteSuggestion(value: 'font-family', category: 'CSS property'),
-  AutocompleteSuggestion(value: 'display', category: 'CSS property'),
-  AutocompleteSuggestion(value: 'position', category: 'CSS property'),
-  AutocompleteSuggestion(value: 'top', category: 'CSS property'),
-  AutocompleteSuggestion(value: 'right', category: 'CSS property'),
-  AutocompleteSuggestion(value: 'bottom', category: 'CSS property'),
-  AutocompleteSuggestion(value: 'left', category: 'CSS property'),
-  AutocompleteSuggestion(value: 'width', category: 'CSS property'),
-  AutocompleteSuggestion(value: 'height', category: 'CSS property'),
-  AutocompleteSuggestion(value: 'max-width', category: 'CSS property'),
-  AutocompleteSuggestion(value: 'min-width', category: 'CSS property'),
-  AutocompleteSuggestion(value: 'padding', category: 'CSS property'),
-  AutocompleteSuggestion(value: 'margin', category: 'CSS property'),
-  AutocompleteSuggestion(value: 'border', category: 'CSS property'),
-  AutocompleteSuggestion(value: 'border-radius', category: 'CSS property'),
-  AutocompleteSuggestion(value: 'box-shadow', category: 'CSS property'),
-  AutocompleteSuggestion(value: 'opacity', category: 'CSS property'),
-  AutocompleteSuggestion(value: 'z-index', category: 'CSS property'),
-  AutocompleteSuggestion(value: 'overflow', category: 'CSS property'),
-  AutocompleteSuggestion(value: 'align-items', category: 'CSS property'),
-  AutocompleteSuggestion(value: 'justify-content', category: 'CSS property'),
+const List<AutocompleteSuggestion> kEditorAutocompleteSuggestions =
+    <AutocompleteSuggestion>[
   AutocompleteSuggestion(
-      value: 'grid-template-columns', category: 'CSS property'),
-  AutocompleteSuggestion(value: 'gap', category: 'CSS property'),
-  AutocompleteSuggestion(value: 'transition', category: 'CSS property'),
-  AutocompleteSuggestion(value: 'transform', category: 'CSS property'),
-
-  // CSS values
-  AutocompleteSuggestion(value: 'block', category: 'CSS value'),
-  AutocompleteSuggestion(value: 'inline', category: 'CSS value'),
-  AutocompleteSuggestion(value: 'inline-block', category: 'CSS value'),
-  AutocompleteSuggestion(value: 'flex', category: 'CSS value'),
-  AutocompleteSuggestion(value: 'grid', category: 'CSS value'),
-  AutocompleteSuggestion(value: 'relative', category: 'CSS value'),
-  AutocompleteSuggestion(value: 'absolute', category: 'CSS value'),
-  AutocompleteSuggestion(value: 'fixed', category: 'CSS value'),
-  AutocompleteSuggestion(value: 'sticky', category: 'CSS value'),
-  AutocompleteSuggestion(value: 'none', category: 'CSS value'),
-  AutocompleteSuggestion(value: 'auto', category: 'CSS value'),
-  AutocompleteSuggestion(value: 'hidden', category: 'CSS value'),
-  AutocompleteSuggestion(value: 'visible', category: 'CSS value'),
-  AutocompleteSuggestion(value: 'center', category: 'CSS value'),
-  AutocompleteSuggestion(value: 'space-between', category: 'CSS value'),
-  AutocompleteSuggestion(value: 'space-around', category: 'CSS value'),
-  AutocompleteSuggestion(value: 'space-evenly', category: 'CSS value'),
-  AutocompleteSuggestion(value: 'bold', category: 'CSS value'),
-  AutocompleteSuggestion(value: 'normal', category: 'CSS value'),
-
-  // CSS colors
-  AutocompleteSuggestion(
-    value: 'orange',
-    category: 'CSS color',
-    previewColor: Color(0xFFFFA500),
+    value: 'div',
+    category: 'HTML tag',
+    language: AutocompleteLanguage.html,
   ),
   AutocompleteSuggestion(
-    value: 'orangered',
-    category: 'CSS color',
-    previewColor: Color(0xFFFF4500),
+    value: 'color',
+    category: 'CSS property',
+    language: AutocompleteLanguage.css,
   ),
   AutocompleteSuggestion(
-    value: 'orchid',
-    category: 'CSS color',
-    previewColor: Color(0xFFDA70D6),
+    value: 'const',
+    category: 'JavaScript keyword',
+    language: AutocompleteLanguage.javascript,
   ),
   AutocompleteSuggestion(
-    value: 'olivedrab',
-    category: 'CSS color',
-    previewColor: Color(0xFF6B8E23),
+    value: 'console',
+    category: 'JavaScript global',
+    language: AutocompleteLanguage.javascript,
   ),
-  AutocompleteSuggestion(
-    value: 'black',
-    category: 'CSS color',
-    previewColor: Color(0xFF000000),
-  ),
-  AutocompleteSuggestion(
-    value: 'white',
-    category: 'CSS color',
-    previewColor: Color(0xFFFFFFFF),
-  ),
-  AutocompleteSuggestion(
-    value: 'red',
-    category: 'CSS color',
-    previewColor: Color(0xFFFF0000),
-  ),
-  AutocompleteSuggestion(
-    value: 'green',
-    category: 'CSS color',
-    previewColor: Color(0xFF008000),
-  ),
-  AutocompleteSuggestion(
-    value: 'blue',
-    category: 'CSS color',
-    previewColor: Color(0xFF0000FF),
-  ),
-  AutocompleteSuggestion(
-    value: 'yellow',
-    category: 'CSS color',
-    previewColor: Color(0xFFFFFF00),
-  ),
-  AutocompleteSuggestion(
-    value: '#000000',
-    category: 'CSS color',
-    previewColor: Color(0xFF000000),
-  ),
-  AutocompleteSuggestion(
-    value: '#ffffff',
-    category: 'CSS color',
-    previewColor: Color(0xFFFFFFFF),
-  ),
-  AutocompleteSuggestion(
-    value: '#ffa500',
-    category: 'CSS color',
-    previewColor: Color(0xFFFFA500),
-  ),
-
-  // JavaScript keywords and globals
-  AutocompleteSuggestion(value: 'const', category: 'JavaScript keyword'),
-  AutocompleteSuggestion(value: 'let', category: 'JavaScript keyword'),
-  AutocompleteSuggestion(value: 'var', category: 'JavaScript keyword'),
-  AutocompleteSuggestion(value: 'function', category: 'JavaScript keyword'),
-  AutocompleteSuggestion(value: 'return', category: 'JavaScript keyword'),
-  AutocompleteSuggestion(value: 'if', category: 'JavaScript keyword'),
-  AutocompleteSuggestion(value: 'else', category: 'JavaScript keyword'),
-  AutocompleteSuggestion(value: 'for', category: 'JavaScript keyword'),
-  AutocompleteSuggestion(value: 'while', category: 'JavaScript keyword'),
-  AutocompleteSuggestion(value: 'switch', category: 'JavaScript keyword'),
-  AutocompleteSuggestion(value: 'case', category: 'JavaScript keyword'),
-  AutocompleteSuggestion(value: 'break', category: 'JavaScript keyword'),
-  AutocompleteSuggestion(value: 'continue', category: 'JavaScript keyword'),
-  AutocompleteSuggestion(value: 'try', category: 'JavaScript keyword'),
-  AutocompleteSuggestion(value: 'catch', category: 'JavaScript keyword'),
-  AutocompleteSuggestion(value: 'finally', category: 'JavaScript keyword'),
-  AutocompleteSuggestion(value: 'async', category: 'JavaScript keyword'),
-  AutocompleteSuggestion(value: 'await', category: 'JavaScript keyword'),
-  AutocompleteSuggestion(value: 'class', category: 'JavaScript keyword'),
-  AutocompleteSuggestion(value: 'new', category: 'JavaScript keyword'),
-  AutocompleteSuggestion(value: 'this', category: 'JavaScript keyword'),
-  AutocompleteSuggestion(value: 'console', category: 'JavaScript global'),
-  AutocompleteSuggestion(value: 'document', category: 'JavaScript global'),
-  AutocompleteSuggestion(value: 'window', category: 'JavaScript global'),
-  AutocompleteSuggestion(value: 'setTimeout', category: 'JavaScript global'),
-  AutocompleteSuggestion(value: 'setInterval', category: 'JavaScript global'),
-  AutocompleteSuggestion(value: 'Promise', category: 'JavaScript global'),
-  AutocompleteSuggestion(value: 'Array', category: 'JavaScript global'),
-  AutocompleteSuggestion(value: 'Object', category: 'JavaScript global'),
-  AutocompleteSuggestion(value: 'String', category: 'JavaScript global'),
-  AutocompleteSuggestion(value: 'Number', category: 'JavaScript global'),
 ];
