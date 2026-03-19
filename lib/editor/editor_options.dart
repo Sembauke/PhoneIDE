@@ -10,6 +10,10 @@ class EditorOptions {
     this.takeFullHeight = true,
     this.isEditable = true,
     this.fontFamily,
+    this.enableSimpleAutocomplete = false,
+    this.maxAutocompleteSuggestions = 6,
+    this.autocompleteAssetPath =
+        'packages/phone_ide/assets/autocomplete/suggestions.json',
   });
 
   // [backgroundColor] is the background color of the editor.
@@ -37,6 +41,15 @@ class EditorOptions {
   bool showLinebar;
 
   String? fontFamily;
+
+  // Enable lightweight, built-in autocomplete suggestions.
+  bool enableSimpleAutocomplete;
+
+  // Max suggestions shown in the autocomplete dropdown.
+  int maxAutocompleteSuggestions;
+
+  // JSON asset path containing autocomplete suggestions.
+  String autocompleteAssetPath;
 }
 
 class EditorRegionOptions {
