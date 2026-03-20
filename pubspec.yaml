@@ -1,6 +1,6 @@
 name: phone_ide
 description: PhoneIDE is a highly dynamic IDE for learning on freeCodeCamp's mobile app.
-version: 2.0.1
+version: 3.0.0
 repository: https://github.com/freeCodeCamp/PhoneIDE
 environment:
   sdk: ">=3.0.0 <4.0.0"
