@@ -1,3 +1,9 @@
+### 3.0.0
+- feat: adds TextMate syntax highlighting for `html`, `css`, and `javascript`, including embedded styles/scripts inside HTML.
+- refactor: replaces `highlight` and `flutter_highlight` with `syntax_highlight`.
+- fix: falls back to plain text when highlighter initialization fails so the editor remains usable.
+- test: adds coverage for highlighting behavior and fallback paths.
+
 ### 2.0.1
 - fix: having multiple editors at once will now have the correct highlighting for both editors
 
