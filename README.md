@@ -49,7 +49,7 @@ void main() {
 - **enableSimpleAutocomplete** (`bool`, in `EditorOptions`): Enables lightweight built-in HTML/CSS/JS suggestions.
 - **maxAutocompleteSuggestions** (`int`, in `EditorOptions`): Caps how many suggestions are shown in the dropdown.
 - **autocompleteAssetPath** (`String`, in `EditorOptions`): JSON asset used for autocomplete suggestions.
-  Default is `packages/phone_ide/assets/autocomplete/javascript_objects.generated.json`.
+  Default is `packages/phone_ide/assets/autocomplete/javascript_suggestions.json`.
   The editor also merges:
   - `packages/phone_ide/assets/autocomplete/html_suggestions.json`
   - `packages/phone_ide/assets/autocomplete/css_suggestions.json`
@@ -67,7 +67,7 @@ EditorOptions(
   enableSimpleAutocomplete: true,
   maxAutocompleteSuggestions: 8,
   autocompleteAssetPath:
-      'packages/phone_ide/assets/autocomplete/javascript_objects.generated.json',
+      'packages/phone_ide/assets/autocomplete/javascript_suggestions.json',
 );
 ```
 
@@ -78,7 +78,7 @@ Autocomplete suggestions can be defined in an asset JSON file.
 Bundled files:
 - `packages/phone_ide/assets/autocomplete/html_suggestions.json`
 - `packages/phone_ide/assets/autocomplete/css_suggestions.json`
-- `packages/phone_ide/assets/autocomplete/javascript_objects.generated.json`
+- `packages/phone_ide/assets/autocomplete/javascript_suggestions.json`
 
 Supported fields per suggestion item:
 - `value` (required): primary token used for matching.
@@ -132,7 +132,7 @@ For object-aware completions (for example `console.` -> `log`, `error`), the par
 ```
 
 JavaScript object-member schema lives in:
-`assets/autocomplete/javascript_objects.generated.json`
+`assets/autocomplete/javascript_suggestions.json`
 
 ## Listening to Text Changes
 

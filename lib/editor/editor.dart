@@ -817,6 +817,12 @@ class EditorState extends State<Editor> {
     }
 
     final int caretOffset = _safeCaretOffset(selection, text);
+    final String lineContextBeforeCaret = _lineBeforeCaret(text, caretOffset);
+    if (isInsideQuotedText(lineContextBeforeCaret)) {
+      _hideAutocomplete();
+      return;
+    }
+
     AutocompleteTokenMatch? tokenMatch = extractAutocompleteToken(
       text: text,
       caretOffset: caretOffset,
@@ -901,6 +907,13 @@ class EditorState extends State<Editor> {
     final int start =
         hardWindowStart > lineStartIndex ? hardWindowStart : lineStartIndex;
     return text.substring(start, safeOffset);
+  }
+
+  String _lineBeforeCaret(String text, int caretOffset) {
+    final int safeOffset = caretOffset.clamp(0, text.length);
+    final int lineStartIndex =
+        safeOffset <= 0 ? 0 : text.lastIndexOf('\n', safeOffset - 1) + 1;
+    return text.substring(lineStartIndex, safeOffset);
   }
 
   void _hideAutocomplete() {

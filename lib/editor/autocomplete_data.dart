@@ -32,13 +32,14 @@ class AutocompleteSuggestion {
   final RegExp? whenRegex;
 }
 
-const String kDefaultJavascriptObjectsAssetPath =
-    'packages/phone_ide/assets/autocomplete/javascript_objects.generated.json';
+const String kDefaultJavascriptSuggestionsAssetPath =
+    'packages/phone_ide/assets/autocomplete/javascript_suggestions.json';
 const String kDefaultHtmlSuggestionsAssetPath =
     'packages/phone_ide/assets/autocomplete/html_suggestions.json';
 const String kDefaultCssSuggestionsAssetPath =
     'packages/phone_ide/assets/autocomplete/css_suggestions.json';
-const String kDefaultAutocompleteAssetPath = kDefaultJavascriptObjectsAssetPath;
+const String kDefaultAutocompleteAssetPath =
+    kDefaultJavascriptSuggestionsAssetPath;
 
 Future<List<AutocompleteSuggestion>> loadAutocompleteSuggestionsFromAsset({
   required String assetPath,
@@ -50,7 +51,7 @@ Future<List<AutocompleteSuggestion>> loadAutocompleteSuggestionsFromAsset({
     if (requestedPath.isNotEmpty) requestedPath,
     kDefaultHtmlSuggestionsAssetPath,
     kDefaultCssSuggestionsAssetPath,
-    kDefaultJavascriptObjectsAssetPath,
+    kDefaultJavascriptSuggestionsAssetPath,
   };
 
   final List<AutocompleteSuggestion> merged = <AutocompleteSuggestion>[];
@@ -300,6 +301,15 @@ List<AutocompleteSuggestion> parseAutocompleteSuggestionsJson(
     parsedKnownSection = true;
   }
 
+  if (!parsedKnownSection && _looksLikeFlatJavascriptSchema(root)) {
+    _parseFlatJavascriptSchema(
+      root: root,
+      parsed: parsed,
+      language: AutocompleteLanguage.javascript,
+    );
+    parsedKnownSection = true;
+  }
+
   if (parsedKnownSection) {
     return parsed;
   }
@@ -323,6 +333,156 @@ List<AutocompleteSuggestion> parseAutocompleteSuggestionsJson(
   });
 
   return parsed;
+}
+
+const Set<String> _flatJavascriptRootMetaKeys = <String>{
+  'keywords',
+  'version',
+  'source',
+  'generatedAt',
+};
+
+const Set<String> _flatJavascriptNodeMetaKeys = <String>{
+  'type',
+  'detail',
+  'description',
+  'insertText',
+};
+
+bool _looksLikeFlatJavascriptSchema(Map<String, dynamic> root) {
+  if (root['keywords'] is List) {
+    return true;
+  }
+
+  int typedNodeCount = 0;
+  root.forEach((String key, dynamic value) {
+    if (_flatJavascriptRootMetaKeys.contains(key)) {
+      return;
+    }
+    if (value is! Map) {
+      return;
+    }
+
+    final String? type = _stringOrNull(value['type']);
+    if (type == null || type.trim().isEmpty) {
+      return;
+    }
+
+    typedNodeCount += 1;
+  });
+
+  return typedNodeCount >= 2;
+}
+
+void _parseFlatJavascriptSchema({
+  required Map<String, dynamic> root,
+  required List<AutocompleteSuggestion> parsed,
+  required AutocompleteLanguage language,
+}) {
+  final dynamic keywordsNode = root['keywords'];
+  if (keywordsNode is List) {
+    for (final dynamic rawKeyword in keywordsNode) {
+      if (rawKeyword is! String) {
+        continue;
+      }
+
+      final String keyword = rawKeyword.trim();
+      if (keyword.isEmpty) {
+        continue;
+      }
+
+      parsed.add(
+        AutocompleteSuggestion(
+          value: keyword,
+          category: 'JavaScript keyword',
+          language: language,
+        ),
+      );
+    }
+  }
+
+  root.forEach((String key, dynamic value) {
+    if (_flatJavascriptRootMetaKeys.contains(key)) {
+      return;
+    }
+
+    _appendJavascriptTreeSuggestion(
+      nodeName: key,
+      rawNode: value,
+      parsed: parsed,
+      language: language,
+      parentPath: null,
+    );
+  });
+}
+
+void _appendJavascriptTreeSuggestion({
+  required String nodeName,
+  required dynamic rawNode,
+  required List<AutocompleteSuggestion> parsed,
+  required AutocompleteLanguage language,
+  required String? parentPath,
+}) {
+  if (rawNode is! Map) {
+    return;
+  }
+
+  final String trimmedName = nodeName.trim();
+  if (trimmedName.isEmpty) {
+    return;
+  }
+
+  final Map<String, dynamic> node = rawNode.map(
+    (dynamic key, dynamic value) => MapEntry(key.toString(), value),
+  );
+  final String currentPath =
+      parentPath == null ? trimmedName : '$parentPath.$trimmedName';
+  final String? type = _stringOrNull(node['type'])?.toLowerCase();
+  final bool isFunction = type == 'function';
+  final bool isTopLevel = parentPath == null;
+  final String? detail =
+      _stringOrNull(node['detail']) ?? _stringOrNull(node['description']);
+  final String? explicitInsertText = _stringOrNull(node['insertText']);
+  final String insertText =
+      explicitInsertText ?? (isFunction ? '$trimmedName()' : trimmedName);
+
+  final String? whenPattern = isTopLevel
+      ? null
+      : '${_escapeRegexLiteral(parentPath)}\\.[A-Za-z_\\\$]*\$';
+  final RegExp? whenRegex = _parseContextRegex(whenPattern);
+
+  parsed.add(
+    AutocompleteSuggestion(
+      value: trimmedName,
+      label: currentPath,
+      insertText: insertText,
+      category: isTopLevel
+          ? 'JavaScript global'
+          : 'JavaScript ${isFunction ? 'method' : 'member'}',
+      detail: detail ??
+          (isTopLevel
+              ? 'JavaScript ${type ?? 'global'}'
+              : '$parentPath ${isFunction ? 'method' : 'member'}'),
+      language: language,
+      whenPattern: whenPattern,
+      whenRegex: whenRegex,
+      whenBoost: isTopLevel ? 40 : 120,
+    ),
+  );
+
+  node.forEach((String key, dynamic value) {
+    if (_flatJavascriptNodeMetaKeys.contains(key)) {
+      return;
+    }
+
+    _appendJavascriptTreeSuggestion(
+      nodeName: key,
+      rawNode: value,
+      parsed: parsed,
+      language: language,
+      parentPath: currentPath,
+    );
+  });
 }
 
 AutocompleteLanguage? parseAutocompleteLanguage(

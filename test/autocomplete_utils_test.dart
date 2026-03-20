@@ -313,6 +313,28 @@ void main() {
     });
   });
 
+  group('isInsideQuotedText', () {
+    test('returns true inside double quotes', () {
+      expect(isInsideQuotedText('const a = "hel'), isTrue);
+    });
+
+    test('returns true inside single quotes', () {
+      expect(isInsideQuotedText("const a = 'hel"), isTrue);
+    });
+
+    test('returns true inside backticks', () {
+      expect(isInsideQuotedText('const a = `hel'), isTrue);
+    });
+
+    test('returns false after closed quotes', () {
+      expect(isInsideQuotedText('const a = "hello"; con'), isFalse);
+    });
+
+    test('handles escaped quote characters', () {
+      expect(isInsideQuotedText(r'const a = "he\"l'), isTrue);
+    });
+  });
+
   group('applyAutocompleteSuggestion', () {
     test('replaces current token in middle of line and moves cursor', () {
       const String text = 'color: ora;';

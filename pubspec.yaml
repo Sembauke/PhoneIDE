@@ -20,7 +20,7 @@ flutter:
   assets:
     - assets/autocomplete/html_suggestions.json
     - assets/autocomplete/css_suggestions.json
-    - assets/autocomplete/javascript_objects.generated.json
+    - assets/autocomplete/javascript_suggestions.json
   fonts:
     - family: RobotoMono
       fonts:

@@ -205,6 +205,70 @@ bool _isExactTypedSuggestion({
   return false;
 }
 
+bool isInsideQuotedText(String textBeforeCaret) {
+  if (textBeforeCaret.isEmpty) {
+    return false;
+  }
+
+  bool inSingle = false;
+  bool inDouble = false;
+  bool inBacktick = false;
+  bool escaped = false;
+
+  for (int i = 0; i < textBeforeCaret.length; i += 1) {
+    final String char = textBeforeCaret[i];
+
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+
+    if (inSingle || inDouble || inBacktick) {
+      if (char == r'\') {
+        escaped = true;
+        continue;
+      }
+    }
+
+    if (inSingle) {
+      if (char == "'") {
+        inSingle = false;
+      }
+      continue;
+    }
+
+    if (inDouble) {
+      if (char == '"') {
+        inDouble = false;
+      }
+      continue;
+    }
+
+    if (inBacktick) {
+      if (char == '`') {
+        inBacktick = false;
+      }
+      continue;
+    }
+
+    if (char == "'") {
+      inSingle = true;
+      continue;
+    }
+
+    if (char == '"') {
+      inDouble = true;
+      continue;
+    }
+
+    if (char == '`') {
+      inBacktick = true;
+    }
+  }
+
+  return inSingle || inDouble || inBacktick;
+}
+
 List<AutocompleteSuggestion> matchAutocompleteSuggestions({
   required String token,
   required List<AutocompleteSuggestion> suggestions,

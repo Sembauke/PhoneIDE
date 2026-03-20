@@ -138,11 +138,66 @@ void main() {
       expect(parsed.last.value, 'error');
       expect(parsed.last.insertText, 'error()');
     });
+
+    test('parses flat javascript type-tree schema', () {
+      const String raw = r'''
+{
+  "keywords": ["const", "await"],
+  "console": {
+    "type": "object",
+    "log": { "type": "function" },
+    "clear": { "type": "function" }
+  },
+  "Object": {
+    "type": "function",
+    "prototype": {
+      "type": "object",
+      "toString": { "type": "function" }
+    }
+  }
+}
+''';
+
+      final List<AutocompleteSuggestion> parsed =
+          parseAutocompleteSuggestionsJson(raw);
+
+      final AutocompleteSuggestion keyword = parsed.firstWhere(
+        (AutocompleteSuggestion suggestion) =>
+            suggestion.value == 'const' &&
+            suggestion.category == 'JavaScript keyword',
+      );
+      expect(keyword.language, AutocompleteLanguage.javascript);
+
+      final AutocompleteSuggestion consoleGlobal = parsed.firstWhere(
+        (AutocompleteSuggestion suggestion) =>
+            suggestion.value == 'console' && suggestion.label == 'console',
+      );
+      expect(consoleGlobal.category, 'JavaScript global');
+
+      final AutocompleteSuggestion consoleLog = parsed.firstWhere(
+        (AutocompleteSuggestion suggestion) =>
+            suggestion.label == 'console.log',
+      );
+      expect(consoleLog.value, 'log');
+      expect(consoleLog.insertText, 'log()');
+      expect(consoleLog.whenPattern, r'console\.[A-Za-z_\$]*$');
+      expect(consoleLog.whenRegex?.hasMatch('console.lo'), isTrue);
+
+      final AutocompleteSuggestion objectProtoToString = parsed.firstWhere(
+        (AutocompleteSuggestion suggestion) =>
+            suggestion.label == 'Object.prototype.toString',
+      );
+      expect(objectProtoToString.value, 'toString');
+      expect(objectProtoToString.insertText, 'toString()');
+      expect(
+        objectProtoToString.whenPattern,
+        r'Object\.prototype\.[A-Za-z_\$]*$',
+      );
+    });
   });
 
   group('loadAutocompleteSuggestionsFromAsset', () {
-    test('loads html/css/js assets from static language files',
-        () async {
+    test('loads html/css/js assets from static language files', () async {
       const String htmlSuggestions = r'''
 {
   "languages": {
@@ -186,7 +241,7 @@ void main() {
         <String, String>{
           kDefaultHtmlSuggestionsAssetPath: htmlSuggestions,
           kDefaultCssSuggestionsAssetPath: cssSuggestions,
-          kDefaultJavascriptObjectsAssetPath: objectSchema,
+          kDefaultJavascriptSuggestionsAssetPath: objectSchema,
         },
       );
 
