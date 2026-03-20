@@ -464,6 +464,53 @@ void main() {
       expect(insideTagMatches.length, 1);
       expect(insideTagMatches.first.value, 'class');
     });
+
+    test('hides HTML tag suggestions in mixed HTML text content', () {
+      final List<AutocompleteSuggestion> matches = matchAutocompleteSuggestions(
+        token: 'h',
+        suggestions: const <AutocompleteSuggestion>[
+          AutocompleteSuggestion(
+            value: 'h1',
+            category: 'HTML tag',
+            language: AutocompleteLanguage.html,
+          ),
+          AutocompleteSuggestion(
+            value: 'h2',
+            category: 'HTML tag',
+            language: AutocompleteLanguage.html,
+          ),
+        ],
+        maxSuggestions: 4,
+        contextBeforeCaret: '<!DOCTYPE html>\n<div>hello</div>\nh',
+        contextLanguage: AutocompleteLanguage.mixed,
+      );
+
+      expect(matches, isEmpty);
+    });
+
+    test('shows HTML tag suggestions in mixed HTML tag context', () {
+      final List<AutocompleteSuggestion> matches = matchAutocompleteSuggestions(
+        token: 'h',
+        suggestions: const <AutocompleteSuggestion>[
+          AutocompleteSuggestion(
+            value: 'h1',
+            category: 'HTML tag',
+            language: AutocompleteLanguage.html,
+          ),
+          AutocompleteSuggestion(
+            value: 'h2',
+            category: 'HTML tag',
+            language: AutocompleteLanguage.html,
+          ),
+        ],
+        maxSuggestions: 4,
+        contextBeforeCaret: '<!DOCTYPE html>\n<',
+        contextLanguage: AutocompleteLanguage.mixed,
+      );
+
+      expect(matches.length, 2);
+      expect(matches.first.value, anyOf('h1', 'h2'));
+    });
   });
 
   group('isInsideQuotedText', () {

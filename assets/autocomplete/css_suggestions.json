@@ -118,7 +118,6 @@
     "align-self": ["auto", "normal", "stretch", "center", "start", "end", "flex-start", "flex-end", "self-start", "self-end", "baseline"],
     "gap": ["<length>", "<percentage>"],
     "row-gap": ["<length>", "<percentage>"],
-    "column-gap": ["<length>", "<percentage>"],
     "order": ["<integer>"],
 
     "grid": ["none", "<grid-template>"],

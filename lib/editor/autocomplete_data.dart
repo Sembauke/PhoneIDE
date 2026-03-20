@@ -301,6 +301,24 @@ List<AutocompleteSuggestion> parseAutocompleteSuggestionsJson(
     parsedKnownSection = true;
   }
 
+  if (!parsedKnownSection && _looksLikeCssSchema(root)) {
+    _parseCssSchema(
+      root: root,
+      parsed: parsed,
+      language: AutocompleteLanguage.css,
+    );
+    parsedKnownSection = true;
+  }
+
+  if (!parsedKnownSection && _looksLikeHtmlSchema(root)) {
+    _parseHtmlSchema(
+      root: root,
+      parsed: parsed,
+      language: AutocompleteLanguage.html,
+    );
+    parsedKnownSection = true;
+  }
+
   if (!parsedKnownSection && _looksLikeFlatJavascriptSchema(root)) {
     _parseFlatJavascriptSchema(
       root: root,
@@ -333,6 +351,311 @@ List<AutocompleteSuggestion> parseAutocompleteSuggestionsJson(
   });
 
   return parsed;
+}
+
+bool _looksLikeCssSchema(Map<String, dynamic> root) {
+  if (root['properties'] is Map) {
+    final Map<dynamic, dynamic> properties = root['properties'] as Map;
+    if (properties.isNotEmpty) {
+      int cssLikeEntries = 0;
+      properties.forEach((dynamic key, dynamic value) {
+        if (key is! String) {
+          return;
+        }
+
+        final String propertyName = key.trim();
+        if (propertyName.isEmpty) {
+          return;
+        }
+
+        final bool valueLooksSupported =
+            value is List || value is String || value is Map;
+        if (!valueLooksSupported) {
+          return;
+        }
+
+        cssLikeEntries += 1;
+      });
+      if (cssLikeEntries > 0) {
+        return true;
+      }
+    }
+  }
+
+  final dynamic atRules = root['atRules'];
+  if (atRules is List &&
+      atRules.any(
+          (dynamic rule) => rule is String && rule.trim().startsWith('@'))) {
+    return true;
+  }
+
+  return false;
+}
+
+const Set<String> _htmlSchemaMetaKeys = <String>{
+  'globalAttributes',
+  'version',
+  'source',
+  'generatedAt',
+};
+
+bool _looksLikeHtmlSchema(Map<String, dynamic> root) {
+  if (root['globalAttributes'] is List) {
+    return true;
+  }
+
+  int htmlTagEntries = 0;
+  root.forEach((String key, dynamic value) {
+    if (_htmlSchemaMetaKeys.contains(key)) {
+      return;
+    }
+
+    if (key.trim().isEmpty || value is! List) {
+      return;
+    }
+
+    if (value.every((dynamic item) => item is String)) {
+      htmlTagEntries += 1;
+    }
+  });
+
+  return htmlTagEntries >= 3;
+}
+
+void _parseHtmlSchema({
+  required Map<String, dynamic> root,
+  required List<AutocompleteSuggestion> parsed,
+  required AutocompleteLanguage language,
+}) {
+  final Set<String> emittedTags = <String>{};
+  final Set<String> emittedAttributes = <String>{};
+
+  final Set<String> globalAttributes = _toTrimmedStringSet(
+    root['globalAttributes'],
+  );
+
+  root.forEach((String key, dynamic value) {
+    if (_htmlSchemaMetaKeys.contains(key)) {
+      return;
+    }
+
+    if (value is! List) {
+      return;
+    }
+
+    final String tagName = key.trim();
+    if (tagName.isEmpty) {
+      return;
+    }
+
+    if (emittedTags.add(tagName.toLowerCase())) {
+      parsed.add(
+        AutocompleteSuggestion(
+          value: tagName,
+          category: 'HTML tag',
+          language: language,
+        ),
+      );
+    }
+
+    final Set<String> tagAttributes = _toTrimmedStringSet(value);
+    final Set<String> combinedAttributes = <String>{
+      ...globalAttributes,
+      ...tagAttributes,
+    };
+
+    for (final String attribute in combinedAttributes) {
+      final String normalizedAttribute = attribute.toLowerCase();
+      if (!emittedAttributes.add(normalizedAttribute)) {
+        continue;
+      }
+
+      parsed.add(
+        AutocompleteSuggestion(
+          value: attribute,
+          category: 'HTML attribute',
+          language: language,
+        ),
+      );
+    }
+  });
+}
+
+Set<String> _toTrimmedStringSet(dynamic value) {
+  if (value is! List) {
+    return const <String>{};
+  }
+
+  return value
+      .whereType<String>()
+      .map((String item) => item.trim())
+      .where((String item) => item.isNotEmpty)
+      .toSet();
+}
+
+void _parseCssSchema({
+  required Map<String, dynamic> root,
+  required List<AutocompleteSuggestion> parsed,
+  required AutocompleteLanguage language,
+}) {
+  final Set<String> emittedPropertyNames = <String>{};
+  final Set<String> emittedAtRules = <String>{};
+  final Set<String> emittedValues = <String>{};
+
+  final dynamic propertiesNode = root['properties'];
+  if (propertiesNode is Map) {
+    propertiesNode.forEach((dynamic rawProperty, dynamic rawAllowedValues) {
+      if (rawProperty is! String) {
+        return;
+      }
+
+      final String propertyName = rawProperty.trim();
+      if (propertyName.isEmpty) {
+        return;
+      }
+
+      if (emittedPropertyNames.add(propertyName.toLowerCase())) {
+        parsed.add(
+          AutocompleteSuggestion(
+            value: propertyName,
+            category: 'CSS property',
+            language: language,
+          ),
+        );
+      }
+
+      final List<String> allowedValues =
+          _extractCssAllowedValues(rawAllowedValues);
+      if (allowedValues.isEmpty) {
+        return;
+      }
+
+      final String propertyContextPattern =
+          '(?:^|[;{]\\s*)${_escapeRegexLiteral(propertyName)}\\s*:\\s*[^;]*\$';
+      final RegExp? propertyContextRegex =
+          _parseContextRegex(propertyContextPattern);
+
+      for (final String rawValue in allowedValues) {
+        final String? value = _normalizeCssValue(rawValue);
+        if (value == null) {
+          continue;
+        }
+
+        final String normalizedValue = value.toLowerCase();
+        if (!emittedValues.add(normalizedValue)) {
+          continue;
+        }
+
+        parsed.add(
+          AutocompleteSuggestion(
+            value: value,
+            category: 'CSS value',
+            language: language,
+            whenPattern: propertyContextPattern,
+            whenRegex: propertyContextRegex,
+            whenBoost: 110,
+            previewColor: _parseHexColor(value),
+          ),
+        );
+      }
+    });
+  }
+
+  final dynamic atRulesNode = root['atRules'];
+  if (atRulesNode is List) {
+    for (final dynamic rawRule in atRulesNode) {
+      if (rawRule is! String) {
+        continue;
+      }
+
+      final String atRule = rawRule.trim();
+      if (atRule.isEmpty || !atRule.startsWith('@')) {
+        continue;
+      }
+
+      if (!emittedAtRules.add(atRule.toLowerCase())) {
+        continue;
+      }
+
+      parsed.add(
+        AutocompleteSuggestion(
+          value: atRule,
+          category: 'CSS at-rule',
+          language: language,
+        ),
+      );
+    }
+  }
+
+  final dynamic keywordsNode = root['keywords'];
+  if (keywordsNode is List) {
+    for (final dynamic rawKeyword in keywordsNode) {
+      if (rawKeyword is! String) {
+        continue;
+      }
+
+      final String keyword = rawKeyword.trim();
+      if (keyword.isEmpty) {
+        continue;
+      }
+
+      final String normalizedKeyword = keyword.toLowerCase();
+      if (!emittedValues.add(normalizedKeyword)) {
+        continue;
+      }
+
+      parsed.add(
+        AutocompleteSuggestion(
+          value: keyword,
+          category: 'CSS value',
+          language: language,
+          previewColor: _parseHexColor(keyword),
+        ),
+      );
+    }
+  }
+}
+
+List<String> _extractCssAllowedValues(dynamic rawAllowedValues) {
+  if (rawAllowedValues is List) {
+    return rawAllowedValues
+        .whereType<String>()
+        .map((String value) => value.trim())
+        .where((String value) => value.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  if (rawAllowedValues is String) {
+    final String value = rawAllowedValues.trim();
+    if (value.isEmpty) {
+      return const <String>[];
+    }
+    return <String>[value];
+  }
+
+  if (rawAllowedValues is Map) {
+    return rawAllowedValues.keys
+        .whereType<String>()
+        .map((String value) => value.trim())
+        .where((String value) => value.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  return const <String>[];
+}
+
+String? _normalizeCssValue(String rawValue) {
+  final String value = rawValue.trim();
+  if (value.isEmpty) {
+    return null;
+  }
+
+  // Skip grammar placeholders such as <length> or <color>.
+  if (value.startsWith('<') && value.endsWith('>')) {
+    return null;
+  }
+
+  return value;
 }
 
 const Set<String> _flatJavascriptRootMetaKeys = <String>{

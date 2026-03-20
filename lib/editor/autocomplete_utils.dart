@@ -112,6 +112,13 @@ AutocompleteLanguage _resolveEffectiveLanguage(
     return AutocompleteLanguage.html;
   }
 
+  // In mixed documents that already contain HTML markup, default to HTML
+  // outside explicit <script>/<style> blocks.
+  final bool hasHtmlMarkers = lower.contains('<') || lower.contains('>');
+  if (hasHtmlMarkers) {
+    return AutocompleteLanguage.html;
+  }
+
   return AutocompleteLanguage.mixed;
 }
 

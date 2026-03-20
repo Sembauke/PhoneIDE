@@ -194,6 +194,84 @@ void main() {
         r'Object\.prototype\.[A-Za-z_\$]*$',
       );
     });
+
+    test('parses css properties schema with keywords and at-rules', () {
+      const String raw = r'''
+{
+  "keywords": ["block", "transparent"],
+  "atRules": ["@media", "@supports"],
+  "properties": {
+    "display": ["block", "flex", "<length>"],
+    "color": ["transparent", "#ffffff"]
+  }
+}
+''';
+
+      final List<AutocompleteSuggestion> parsed =
+          parseAutocompleteSuggestionsJson(raw);
+
+      final AutocompleteSuggestion displayProperty = parsed.firstWhere(
+        (AutocompleteSuggestion suggestion) =>
+            suggestion.value == 'display' &&
+            suggestion.category == 'CSS property',
+      );
+      expect(displayProperty.language, AutocompleteLanguage.css);
+
+      final AutocompleteSuggestion atRule = parsed.firstWhere(
+        (AutocompleteSuggestion suggestion) =>
+            suggestion.value == '@media' &&
+            suggestion.category == 'CSS at-rule',
+      );
+      expect(atRule.language, AutocompleteLanguage.css);
+
+      final AutocompleteSuggestion flexValue = parsed.firstWhere(
+        (AutocompleteSuggestion suggestion) =>
+            suggestion.value == 'flex' && suggestion.category == 'CSS value',
+      );
+      expect(flexValue.language, AutocompleteLanguage.css);
+      expect(flexValue.whenPattern, contains('display'));
+      expect(flexValue.whenRegex?.hasMatch('display: fl'), isTrue);
+
+      expect(
+        parsed.any((AutocompleteSuggestion suggestion) =>
+            suggestion.value == '<length>'),
+        isFalse,
+      );
+    });
+
+    test('parses html tag-to-attributes schema', () {
+      const String raw = r'''
+{
+  "globalAttributes": ["id", "class", "data-*"],
+  "a": ["href", "target", "rel"],
+  "img": ["src", "alt", "width", "height"],
+  "div": []
+}
+''';
+
+      final List<AutocompleteSuggestion> parsed =
+          parseAutocompleteSuggestionsJson(raw);
+
+      final AutocompleteSuggestion tag = parsed.firstWhere(
+        (AutocompleteSuggestion suggestion) =>
+            suggestion.value == 'a' && suggestion.category == 'HTML tag',
+      );
+      expect(tag.language, AutocompleteLanguage.html);
+
+      final AutocompleteSuggestion hrefAttribute = parsed.firstWhere(
+        (AutocompleteSuggestion suggestion) =>
+            suggestion.value == 'href' &&
+            suggestion.category == 'HTML attribute',
+      );
+      expect(hrefAttribute.language, AutocompleteLanguage.html);
+
+      final AutocompleteSuggestion globalAttribute = parsed.firstWhere(
+        (AutocompleteSuggestion suggestion) =>
+            suggestion.value == 'class' &&
+            suggestion.category == 'HTML attribute',
+      );
+      expect(globalAttribute.language, AutocompleteLanguage.html);
+    });
   });
 
   group('loadAutocompleteSuggestionsFromAsset', () {
