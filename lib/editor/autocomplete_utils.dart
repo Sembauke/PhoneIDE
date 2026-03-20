@@ -31,6 +31,279 @@ class _MemberAccessContext {
   final String objectName;
 }
 
+class _CssRuleContext {
+  const _CssRuleContext({
+    required this.isInDeclarationBlock,
+    required this.isInValueContext,
+  });
+
+  final bool isInDeclarationBlock;
+  final bool isInValueContext;
+}
+
+class _HtmlRuleContext {
+  const _HtmlRuleContext({
+    required this.isInsideTag,
+    required this.isTagNameContext,
+    required this.isAttributeContext,
+  });
+
+  final bool isInsideTag;
+  final bool isTagNameContext;
+  final bool isAttributeContext;
+}
+
+class _AutocompleteRuleContext {
+  const _AutocompleteRuleContext({
+    required this.effectiveLanguage,
+    required this.css,
+    required this.html,
+  });
+
+  final AutocompleteLanguage effectiveLanguage;
+  final _CssRuleContext css;
+  final _HtmlRuleContext html;
+}
+
+// Builds a lightweight syntax context used to gate suggestions.
+_AutocompleteRuleContext _buildRuleContext({
+  required String contextBeforeCaret,
+  required AutocompleteLanguage contextLanguage,
+}) {
+  final AutocompleteLanguage effectiveLanguage =
+      _resolveEffectiveLanguage(contextBeforeCaret, contextLanguage);
+  return _AutocompleteRuleContext(
+    effectiveLanguage: effectiveLanguage,
+    css: _analyzeCssRuleContext(contextBeforeCaret),
+    html: _analyzeHtmlRuleContext(contextBeforeCaret),
+  );
+}
+
+// Resolves the active language for this cursor position.
+// In mixed files (e.g. HTML), this switches by nearest open <script>/<style>.
+AutocompleteLanguage _resolveEffectiveLanguage(
+  String contextBeforeCaret,
+  AutocompleteLanguage contextLanguage,
+) {
+  if (contextLanguage != AutocompleteLanguage.mixed) {
+    return contextLanguage;
+  }
+
+  if (contextBeforeCaret.trim().isEmpty) {
+    return AutocompleteLanguage.mixed;
+  }
+
+  final String lower = contextBeforeCaret.toLowerCase();
+  final int lastScriptOpen = lower.lastIndexOf('<script');
+  final int lastScriptClose = lower.lastIndexOf('</script');
+  if (lastScriptOpen > lastScriptClose) {
+    return AutocompleteLanguage.javascript;
+  }
+
+  final int lastStyleOpen = lower.lastIndexOf('<style');
+  final int lastStyleClose = lower.lastIndexOf('</style');
+  if (lastStyleOpen > lastStyleClose) {
+    return AutocompleteLanguage.css;
+  }
+
+  final int lastTagOpen = lower.lastIndexOf('<');
+  final int lastTagClose = lower.lastIndexOf('>');
+  if (lastTagOpen > lastTagClose) {
+    return AutocompleteLanguage.html;
+  }
+
+  return AutocompleteLanguage.mixed;
+}
+
+// Detects whether the cursor is currently inside a CSS declaration block
+// and whether the active declaration is in "value position" (after ':').
+_CssRuleContext _analyzeCssRuleContext(String contextBeforeCaret) {
+  int declarationDepth = 0;
+  int lastOpenBraceIndex = -1;
+
+  for (int i = 0; i < contextBeforeCaret.length; i += 1) {
+    final String char = contextBeforeCaret[i];
+    if (char == '{') {
+      declarationDepth += 1;
+      lastOpenBraceIndex = i;
+    } else if (char == '}') {
+      declarationDepth = math.max(0, declarationDepth - 1);
+      if (declarationDepth == 0) {
+        lastOpenBraceIndex = -1;
+      }
+    }
+  }
+
+  if (declarationDepth <= 0 || lastOpenBraceIndex < 0) {
+    return const _CssRuleContext(
+      isInDeclarationBlock: false,
+      isInValueContext: false,
+    );
+  }
+
+  // Limit value/property detection to only the active declaration segment.
+  final String declarationSlice =
+      contextBeforeCaret.substring(lastOpenBraceIndex + 1);
+  final int lastSemicolon = declarationSlice.lastIndexOf(';');
+  final String activeDeclaration = lastSemicolon >= 0
+      ? declarationSlice.substring(lastSemicolon + 1)
+      : declarationSlice;
+  final bool isInValueContext = activeDeclaration.contains(':');
+
+  return _CssRuleContext(
+    isInDeclarationBlock: true,
+    isInValueContext: isInValueContext,
+  );
+}
+
+// Detects whether the cursor is in an HTML tag and whether we're typing
+// a tag name or an attribute slot.
+_HtmlRuleContext _analyzeHtmlRuleContext(String contextBeforeCaret) {
+  final int lastTagOpenIndex = contextBeforeCaret.lastIndexOf('<');
+  if (lastTagOpenIndex < 0) {
+    return const _HtmlRuleContext(
+      isInsideTag: false,
+      isTagNameContext: false,
+      isAttributeContext: false,
+    );
+  }
+
+  final int lastTagCloseIndex = contextBeforeCaret.lastIndexOf('>');
+  if (lastTagCloseIndex > lastTagOpenIndex) {
+    return const _HtmlRuleContext(
+      isInsideTag: false,
+      isTagNameContext: false,
+      isAttributeContext: false,
+    );
+  }
+
+  final String rawTagContent = contextBeforeCaret.substring(lastTagOpenIndex);
+  final String tagContentWithoutOpen = rawTagContent.substring(1);
+  final String trimmedStart = tagContentWithoutOpen.trimLeft();
+
+  if (trimmedStart.startsWith('!')) {
+    return const _HtmlRuleContext(
+      isInsideTag: true,
+      isTagNameContext: false,
+      isAttributeContext: false,
+    );
+  }
+
+  final RegExp tagNamePattern = RegExp(r'^/?([A-Za-z][A-Za-z0-9-]*)');
+  final RegExpMatch? tagNameMatch = tagNamePattern.firstMatch(trimmedStart);
+  if (tagNameMatch == null) {
+    return const _HtmlRuleContext(
+      isInsideTag: true,
+      isTagNameContext: true,
+      isAttributeContext: false,
+    );
+  }
+
+  final String afterTagName = trimmedStart.substring(tagNameMatch.end);
+  if (afterTagName.trim().isEmpty && !trimmedStart.endsWith(' ')) {
+    return const _HtmlRuleContext(
+      isInsideTag: true,
+      isTagNameContext: true,
+      isAttributeContext: false,
+    );
+  }
+
+  return const _HtmlRuleContext(
+    isInsideTag: true,
+    isTagNameContext: false,
+    isAttributeContext: true,
+  );
+}
+
+// Falls back to category naming when language is not explicitly set on item.
+AutocompleteLanguage _suggestionLanguage(AutocompleteSuggestion suggestion) {
+  final AutocompleteLanguage? explicitLanguage = suggestion.language;
+  if (explicitLanguage != null) {
+    return explicitLanguage;
+  }
+
+  final String category = suggestion.category.toLowerCase();
+  if (category.startsWith('html')) {
+    return AutocompleteLanguage.html;
+  }
+  if (category.startsWith('css')) {
+    return AutocompleteLanguage.css;
+  }
+  if (category.startsWith('javascript')) {
+    return AutocompleteLanguage.javascript;
+  }
+
+  return AutocompleteLanguage.mixed;
+}
+
+bool _matchesLanguageForContext({
+  required AutocompleteSuggestion suggestion,
+  required AutocompleteLanguage effectiveLanguage,
+}) {
+  // Keep current behavior when language cannot be inferred from context.
+  if (effectiveLanguage == AutocompleteLanguage.mixed) {
+    return true;
+  }
+
+  final AutocompleteLanguage suggestionLanguage =
+      _suggestionLanguage(suggestion);
+  return suggestionLanguage == AutocompleteLanguage.mixed ||
+      suggestionLanguage == effectiveLanguage;
+}
+
+bool _isCssPropertySuggestion(AutocompleteSuggestion suggestion) {
+  return suggestion.category.toLowerCase().startsWith('css property');
+}
+
+bool _isCssValueSuggestion(AutocompleteSuggestion suggestion) {
+  final String category = suggestion.category.toLowerCase();
+  return category.startsWith('css value') || category.startsWith('css color');
+}
+
+bool _isHtmlTagSuggestion(AutocompleteSuggestion suggestion) {
+  return suggestion.category.toLowerCase().startsWith('html tag');
+}
+
+bool _isHtmlAttributeSuggestion(AutocompleteSuggestion suggestion) {
+  return suggestion.category.toLowerCase().startsWith('html attribute');
+}
+
+bool _matchesSuggestionRules({
+  required AutocompleteSuggestion suggestion,
+  required _AutocompleteRuleContext ruleContext,
+}) {
+  final AutocompleteLanguage effectiveLanguage = ruleContext.effectiveLanguage;
+
+  // CSS rules:
+  // - properties only in declaration blocks, before ':'
+  // - values/colors only in declaration blocks, after ':'
+  if (effectiveLanguage == AutocompleteLanguage.css) {
+    if (_isCssPropertySuggestion(suggestion)) {
+      return ruleContext.css.isInDeclarationBlock &&
+          !ruleContext.css.isInValueContext;
+    }
+    if (_isCssValueSuggestion(suggestion)) {
+      return ruleContext.css.isInDeclarationBlock &&
+          ruleContext.css.isInValueContext;
+    }
+  }
+
+  // HTML rules:
+  // - tags only while typing tag names
+  // - attributes only while typing inside a tag's attribute area
+  if (effectiveLanguage == AutocompleteLanguage.html) {
+    if (_isHtmlTagSuggestion(suggestion)) {
+      return ruleContext.html.isInsideTag && ruleContext.html.isTagNameContext;
+    }
+    if (_isHtmlAttributeSuggestion(suggestion)) {
+      return ruleContext.html.isInsideTag &&
+          ruleContext.html.isAttributeContext;
+    }
+  }
+
+  return true;
+}
+
 bool _isTokenCharacter(String char) {
   if (char.isEmpty) {
     return false;
@@ -275,6 +548,7 @@ List<AutocompleteSuggestion> matchAutocompleteSuggestions({
   required int maxSuggestions,
   String contextBeforeCaret = '',
   int regexCandidateLimit = 40,
+  AutocompleteLanguage contextLanguage = AutocompleteLanguage.mixed,
 }) {
   if (maxSuggestions <= 0) {
     return const [];
@@ -283,6 +557,10 @@ List<AutocompleteSuggestion> matchAutocompleteSuggestions({
   final String normalizedToken = token.trim().toLowerCase();
   final _MemberAccessContext? memberContext =
       _extractMemberAccessContext(contextBeforeCaret);
+  final _AutocompleteRuleContext ruleContext = _buildRuleContext(
+    contextBeforeCaret: contextBeforeCaret,
+    contextLanguage: contextLanguage,
+  );
   if (normalizedToken.isEmpty && memberContext == null) {
     return const [];
   }
@@ -296,6 +574,22 @@ List<AutocompleteSuggestion> matchAutocompleteSuggestions({
   final int shortlistLimit = math.max(maxSuggestions * 5, regexCandidateLimit);
 
   for (final AutocompleteSuggestion suggestion in suggestions) {
+    // 1) Gate by effective language at cursor.
+    if (!_matchesLanguageForContext(
+      suggestion: suggestion,
+      effectiveLanguage: ruleContext.effectiveLanguage,
+    )) {
+      continue;
+    }
+
+    // 2) Gate by syntax rules for the effective language.
+    if (!_matchesSuggestionRules(
+      suggestion: suggestion,
+      ruleContext: ruleContext,
+    )) {
+      continue;
+    }
+
     if (memberContext == null && _isDotNotationSuggestion(suggestion)) {
       continue;
     }

@@ -311,6 +311,159 @@ void main() {
 
       expect(matches, isEmpty);
     });
+
+    test('hides CSS property suggestions outside declaration blocks', () {
+      final List<AutocompleteSuggestion> matches = matchAutocompleteSuggestions(
+        token: 'dis',
+        suggestions: const <AutocompleteSuggestion>[
+          AutocompleteSuggestion(
+            value: 'display',
+            category: 'CSS property',
+            language: AutocompleteLanguage.css,
+          ),
+        ],
+        maxSuggestions: 4,
+        contextBeforeCaret: '.card dis',
+        contextLanguage: AutocompleteLanguage.css,
+      );
+
+      expect(matches, isEmpty);
+    });
+
+    test('shows CSS property suggestions inside declaration blocks', () {
+      final List<AutocompleteSuggestion> matches = matchAutocompleteSuggestions(
+        token: 'dis',
+        suggestions: const <AutocompleteSuggestion>[
+          AutocompleteSuggestion(
+            value: 'display',
+            category: 'CSS property',
+            language: AutocompleteLanguage.css,
+          ),
+        ],
+        maxSuggestions: 4,
+        contextBeforeCaret: '.card { dis',
+        contextLanguage: AutocompleteLanguage.css,
+      );
+
+      expect(matches.length, 1);
+      expect(matches.first.value, 'display');
+    });
+
+    test('shows CSS values only in value context after colon', () {
+      final List<AutocompleteSuggestion> noValueMatches =
+          matchAutocompleteSuggestions(
+        token: 'fl',
+        suggestions: const <AutocompleteSuggestion>[
+          AutocompleteSuggestion(
+            value: 'flex',
+            category: 'CSS value',
+            language: AutocompleteLanguage.css,
+          ),
+        ],
+        maxSuggestions: 4,
+        contextBeforeCaret: '.card { fl',
+        contextLanguage: AutocompleteLanguage.css,
+      );
+      expect(noValueMatches, isEmpty);
+
+      final List<AutocompleteSuggestion> valueMatches =
+          matchAutocompleteSuggestions(
+        token: 'fl',
+        suggestions: const <AutocompleteSuggestion>[
+          AutocompleteSuggestion(
+            value: 'flex',
+            category: 'CSS value',
+            language: AutocompleteLanguage.css,
+          ),
+        ],
+        maxSuggestions: 4,
+        contextBeforeCaret: '.card { display: fl',
+        contextLanguage: AutocompleteLanguage.css,
+      );
+      expect(valueMatches.length, 1);
+      expect(valueMatches.first.value, 'flex');
+    });
+
+    test('uses mixed-language rules for style and script blocks', () {
+      final List<AutocompleteSuggestion> styleMatches =
+          matchAutocompleteSuggestions(
+        token: 'dis',
+        suggestions: const <AutocompleteSuggestion>[
+          AutocompleteSuggestion(
+            value: 'display',
+            category: 'CSS property',
+            language: AutocompleteLanguage.css,
+          ),
+          AutocompleteSuggestion(
+            value: 'div',
+            category: 'HTML tag',
+            language: AutocompleteLanguage.html,
+          ),
+        ],
+        maxSuggestions: 4,
+        contextBeforeCaret: '<style>\n.card { dis',
+        contextLanguage: AutocompleteLanguage.mixed,
+      );
+      expect(styleMatches.length, 1);
+      expect(styleMatches.first.value, 'display');
+
+      final List<AutocompleteSuggestion> scriptMatches =
+          matchAutocompleteSuggestions(
+        token: 'con',
+        suggestions: const <AutocompleteSuggestion>[
+          AutocompleteSuggestion(
+            value: 'const',
+            category: 'JavaScript keyword',
+            language: AutocompleteLanguage.javascript,
+          ),
+          AutocompleteSuggestion(
+            value: 'color',
+            category: 'CSS property',
+            language: AutocompleteLanguage.css,
+          ),
+        ],
+        maxSuggestions: 4,
+        contextBeforeCaret: '<script>\ncon',
+        contextLanguage: AutocompleteLanguage.mixed,
+      );
+      expect(scriptMatches.length, 1);
+      expect(scriptMatches.first.value, 'const');
+    });
+
+    test('shows HTML attributes only while typing inside a tag', () {
+      final List<AutocompleteSuggestion> outsideTagMatches =
+          matchAutocompleteSuggestions(
+        token: 'cl',
+        suggestions: const <AutocompleteSuggestion>[
+          AutocompleteSuggestion(
+            value: 'class',
+            category: 'HTML attribute',
+            language: AutocompleteLanguage.html,
+          ),
+        ],
+        maxSuggestions: 4,
+        contextBeforeCaret: 'text cl',
+        contextLanguage: AutocompleteLanguage.html,
+      );
+      expect(outsideTagMatches, isEmpty);
+
+      final List<AutocompleteSuggestion> insideTagMatches =
+          matchAutocompleteSuggestions(
+        token: 'cl',
+        suggestions: const <AutocompleteSuggestion>[
+          AutocompleteSuggestion(
+            value: 'class',
+            category: 'HTML attribute',
+            language: AutocompleteLanguage.html,
+          ),
+        ],
+        maxSuggestions: 4,
+        contextBeforeCaret: '<div cl',
+        contextLanguage: AutocompleteLanguage.html,
+      );
+      expect(insideTagMatches.length, 1);
+      expect(insideTagMatches.first.value, 'class');
+    });
   });
 
   group('isInsideQuotedText', () {

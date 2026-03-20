@@ -518,14 +518,17 @@ class EditorState extends State<Editor> {
   }
 
   List<AutocompleteSuggestion> _suggestionsForCurrentFile() {
-    final AutocompleteLanguage language = resolveAutocompleteLanguage(
-      defaultLanguage: widget.defaultLanguage,
-      path: widget.path,
-    );
-
+    final AutocompleteLanguage language = _autocompleteFileLanguage();
     return filterSuggestionsByLanguage(
       suggestions: _autocompleteSourceSuggestions,
       language: language,
+    );
+  }
+
+  AutocompleteLanguage _autocompleteFileLanguage() {
+    return resolveAutocompleteLanguage(
+      defaultLanguage: widget.defaultLanguage,
+      path: widget.path,
     );
   }
 
@@ -847,6 +850,7 @@ class EditorState extends State<Editor> {
       text,
       caretOffset,
     );
+    final AutocompleteLanguage contextLanguage = _autocompleteFileLanguage();
 
     final List<AutocompleteSuggestion> matches = matchAutocompleteSuggestions(
       token: tokenMatch.token,
@@ -855,6 +859,7 @@ class EditorState extends State<Editor> {
           ? 1
           : widget.options.maxAutocompleteSuggestions,
       contextBeforeCaret: contextBeforeCaret,
+      contextLanguage: contextLanguage,
     );
 
     if (matches.isEmpty) {
@@ -901,11 +906,9 @@ class EditorState extends State<Editor> {
 
   String _contextWindowBeforeCaret(String text, int caretOffset) {
     final int safeOffset = caretOffset.clamp(0, text.length);
-    final int lineStartIndex =
-        safeOffset <= 0 ? 0 : text.lastIndexOf('\n', safeOffset - 1) + 1;
-    final int hardWindowStart = safeOffset > 180 ? safeOffset - 180 : 0;
+    const int contextWindow = 2000;
     final int start =
-        hardWindowStart > lineStartIndex ? hardWindowStart : lineStartIndex;
+        safeOffset > contextWindow ? safeOffset - contextWindow : 0;
     return text.substring(start, safeOffset);
   }
 
