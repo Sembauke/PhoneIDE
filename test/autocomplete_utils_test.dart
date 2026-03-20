@@ -349,6 +349,61 @@ void main() {
       expect(matches.first.value, 'display');
     });
 
+    test('shows HTML tag selectors in CSS selector context', () {
+      final List<AutocompleteSuggestion> matches = matchAutocompleteSuggestions(
+        token: 'h',
+        suggestions: const <AutocompleteSuggestion>[
+          AutocompleteSuggestion(
+            value: 'h1',
+            category: 'HTML tag',
+            language: AutocompleteLanguage.html,
+          ),
+          AutocompleteSuggestion(
+            value: 'header',
+            category: 'HTML tag',
+            language: AutocompleteLanguage.html,
+          ),
+          AutocompleteSuggestion(
+            value: 'height',
+            category: 'CSS property',
+            language: AutocompleteLanguage.css,
+          ),
+        ],
+        maxSuggestions: 6,
+        contextBeforeCaret: 'h',
+        contextLanguage: AutocompleteLanguage.css,
+      );
+
+      expect(matches.length, 2);
+      expect(
+          matches.map((AutocompleteSuggestion suggestion) => suggestion.value),
+          containsAll(<String>['h1', 'header']));
+    });
+
+    test('hides HTML tag selectors once inside CSS declaration block', () {
+      final List<AutocompleteSuggestion> matches = matchAutocompleteSuggestions(
+        token: 'h',
+        suggestions: const <AutocompleteSuggestion>[
+          AutocompleteSuggestion(
+            value: 'h1',
+            category: 'HTML tag',
+            language: AutocompleteLanguage.html,
+          ),
+          AutocompleteSuggestion(
+            value: 'height',
+            category: 'CSS property',
+            language: AutocompleteLanguage.css,
+          ),
+        ],
+        maxSuggestions: 6,
+        contextBeforeCaret: '.card { h',
+        contextLanguage: AutocompleteLanguage.css,
+      );
+
+      expect(matches.length, 1);
+      expect(matches.first.value, 'height');
+    });
+
     test('shows CSS values only in value context after colon', () {
       final List<AutocompleteSuggestion> noValueMatches =
           matchAutocompleteSuggestions(
@@ -511,6 +566,67 @@ void main() {
       expect(matches.length, 2);
       expect(matches.first.value, anyOf('h1', 'h2'));
     });
+
+    test(
+      'uses html fallback for mixed context and hides cross-language suggestions in plain text',
+      () {
+        final List<AutocompleteSuggestion> matches =
+            matchAutocompleteSuggestions(
+          token: 'p',
+          suggestions: const <AutocompleteSuggestion>[
+            AutocompleteSuggestion(
+              value: 'Promise',
+              category: 'JavaScript global',
+              language: AutocompleteLanguage.javascript,
+            ),
+            AutocompleteSuggestion(
+              value: 'padding',
+              category: 'CSS property',
+              language: AutocompleteLanguage.css,
+            ),
+            AutocompleteSuggestion(
+              value: 'p',
+              category: 'HTML tag',
+              language: AutocompleteLanguage.html,
+            ),
+          ],
+          maxSuggestions: 6,
+          contextBeforeCaret: 'Welcome to freeCodeCamp\n\np',
+          contextLanguage: AutocompleteLanguage.mixed,
+          mixedContextFallbackLanguage: AutocompleteLanguage.html,
+        );
+
+        expect(matches, isEmpty);
+      },
+    );
+
+    test(
+      'keeps broad mixed matching when mixed fallback is not constrained',
+      () {
+        final List<AutocompleteSuggestion> matches =
+            matchAutocompleteSuggestions(
+          token: 'p',
+          suggestions: const <AutocompleteSuggestion>[
+            AutocompleteSuggestion(
+              value: 'Promise',
+              category: 'JavaScript global',
+              language: AutocompleteLanguage.javascript,
+            ),
+            AutocompleteSuggestion(
+              value: 'padding',
+              category: 'CSS property',
+              language: AutocompleteLanguage.css,
+            ),
+          ],
+          maxSuggestions: 6,
+          contextBeforeCaret: 'plain text p',
+          contextLanguage: AutocompleteLanguage.mixed,
+          mixedContextFallbackLanguage: AutocompleteLanguage.mixed,
+        );
+
+        expect(matches.length, 2);
+      },
+    );
   });
 
   group('isInsideQuotedText', () {

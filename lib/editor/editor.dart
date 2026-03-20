@@ -532,6 +532,26 @@ class EditorState extends State<Editor> {
     );
   }
 
+  AutocompleteLanguage _mixedAutocompleteFallbackLanguage() {
+    final String normalizedPath = widget.path.toLowerCase().trim();
+    if (normalizedPath.endsWith('.html') ||
+        normalizedPath.endsWith('.htm') ||
+        normalizedPath.endsWith('.xhtml')) {
+      return AutocompleteLanguage.html;
+    }
+
+    final AutocompleteLanguage? parsedDefaultLanguage =
+        parseAutocompleteLanguage(
+      widget.defaultLanguage,
+      allowMixed: false,
+    );
+    if (parsedDefaultLanguage == AutocompleteLanguage.html) {
+      return AutocompleteLanguage.html;
+    }
+
+    return AutocompleteLanguage.mixed;
+  }
+
   Size _editorViewportSize() {
     final Size? viewportSize = _autocompleteViewportSize;
     if (viewportSize != null &&
@@ -851,6 +871,8 @@ class EditorState extends State<Editor> {
       caretOffset,
     );
     final AutocompleteLanguage contextLanguage = _autocompleteFileLanguage();
+    final AutocompleteLanguage mixedContextFallbackLanguage =
+        _mixedAutocompleteFallbackLanguage();
 
     final List<AutocompleteSuggestion> matches = matchAutocompleteSuggestions(
       token: tokenMatch.token,
@@ -860,6 +882,7 @@ class EditorState extends State<Editor> {
           : widget.options.maxAutocompleteSuggestions,
       contextBeforeCaret: contextBeforeCaret,
       contextLanguage: contextLanguage,
+      mixedContextFallbackLanguage: mixedContextFallbackLanguage,
     );
 
     if (matches.isEmpty) {

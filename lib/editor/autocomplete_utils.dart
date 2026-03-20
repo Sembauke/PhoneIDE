@@ -69,9 +69,13 @@ class _AutocompleteRuleContext {
 _AutocompleteRuleContext _buildRuleContext({
   required String contextBeforeCaret,
   required AutocompleteLanguage contextLanguage,
+  required AutocompleteLanguage mixedContextFallbackLanguage,
 }) {
-  final AutocompleteLanguage effectiveLanguage =
-      _resolveEffectiveLanguage(contextBeforeCaret, contextLanguage);
+  final AutocompleteLanguage effectiveLanguage = _resolveEffectiveLanguage(
+    contextBeforeCaret,
+    contextLanguage,
+    mixedContextFallbackLanguage,
+  );
   return _AutocompleteRuleContext(
     effectiveLanguage: effectiveLanguage,
     css: _analyzeCssRuleContext(contextBeforeCaret),
@@ -84,6 +88,7 @@ _AutocompleteRuleContext _buildRuleContext({
 AutocompleteLanguage _resolveEffectiveLanguage(
   String contextBeforeCaret,
   AutocompleteLanguage contextLanguage,
+  AutocompleteLanguage mixedContextFallbackLanguage,
 ) {
   if (contextLanguage != AutocompleteLanguage.mixed) {
     return contextLanguage;
@@ -119,7 +124,7 @@ AutocompleteLanguage _resolveEffectiveLanguage(
     return AutocompleteLanguage.html;
   }
 
-  return AutocompleteLanguage.mixed;
+  return mixedContextFallbackLanguage;
 }
 
 // Detects whether the cursor is currently inside a CSS declaration block
@@ -254,6 +259,12 @@ bool _matchesLanguageForContext({
 
   final AutocompleteLanguage suggestionLanguage =
       _suggestionLanguage(suggestion);
+  if (effectiveLanguage == AutocompleteLanguage.css &&
+      suggestionLanguage == AutocompleteLanguage.html &&
+      _isHtmlTagSuggestion(suggestion)) {
+    return true;
+  }
+
   return suggestionLanguage == AutocompleteLanguage.mixed ||
       suggestionLanguage == effectiveLanguage;
 }
@@ -282,9 +293,18 @@ bool _matchesSuggestionRules({
   final AutocompleteLanguage effectiveLanguage = ruleContext.effectiveLanguage;
 
   // CSS rules:
+  // - selector context (outside declaration blocks): allow HTML tag selectors
   // - properties only in declaration blocks, before ':'
   // - values/colors only in declaration blocks, after ':'
   if (effectiveLanguage == AutocompleteLanguage.css) {
+    if (_isHtmlTagSuggestion(suggestion)) {
+      return !ruleContext.css.isInDeclarationBlock;
+    }
+
+    if (_isHtmlAttributeSuggestion(suggestion)) {
+      return false;
+    }
+
     if (_isCssPropertySuggestion(suggestion)) {
       return ruleContext.css.isInDeclarationBlock &&
           !ruleContext.css.isInValueContext;
@@ -556,6 +576,8 @@ List<AutocompleteSuggestion> matchAutocompleteSuggestions({
   String contextBeforeCaret = '',
   int regexCandidateLimit = 40,
   AutocompleteLanguage contextLanguage = AutocompleteLanguage.mixed,
+  AutocompleteLanguage mixedContextFallbackLanguage =
+      AutocompleteLanguage.mixed,
 }) {
   if (maxSuggestions <= 0) {
     return const [];
@@ -567,6 +589,7 @@ List<AutocompleteSuggestion> matchAutocompleteSuggestions({
   final _AutocompleteRuleContext ruleContext = _buildRuleContext(
     contextBeforeCaret: contextBeforeCaret,
     contextLanguage: contextLanguage,
+    mixedContextFallbackLanguage: mixedContextFallbackLanguage,
   );
   if (normalizedToken.isEmpty && memberContext == null) {
     return const [];
