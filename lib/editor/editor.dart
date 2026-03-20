@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:phone_ide/controller/custom_text_controller.dart';
 import 'package:phone_ide/editor/editor_options.dart';
 import 'package:phone_ide/editor/linebar.dart';
+import 'package:phone_ide/highlighting/textmate_highlighter_registry.dart';
 import 'package:phone_ide/models/textfield_data.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -64,7 +65,7 @@ class EditorState extends State<Editor> {
   @override
   void initState() {
     super.initState();
-    handleFileInit();
+    _initializeEditor();
 
     _textfieldDataSub = widget.textfieldData.stream.listen((event) {
       handleTextChange(
@@ -88,7 +89,35 @@ class EditorState extends State<Editor> {
     _textfieldDataSub.cancel();
   }
 
-  bool isLoading = false;
+  bool isLoading = true;
+
+  Future<void> _initializeEditor() async {
+    await TextMateHighlighterRegistry.instance.initialize();
+    if (!mounted) return;
+    try {
+      await handleFileInit();
+    } catch (error) {
+      if (!mounted) return;
+      debugPrint(
+        'phone_ide: Editor initialization fallback due to error: $error',
+      );
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<SharedPreferences?> _getPreferencesSafe() async {
+    try {
+      return await SharedPreferences.getInstance();
+    } catch (error) {
+      debugPrint(
+        'phone_ide: SharedPreferences unavailable, continuing without cache: '
+        '$error',
+      );
+      return null;
+    }
+  }
 
   void updateLineCount(String event, RegionPosition region) async {
     if (!mounted) return;
@@ -153,19 +182,19 @@ class EditorState extends State<Editor> {
     return calculatedFontSize;
   }
 
-  handleFileInit() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+  Future<void> handleFileInit() async {
+    final prefs = await _getPreferencesSafe();
     String fileContent = widget.defaultValue;
     EditorRegionOptions? region = widget.options.regionOptions;
 
-    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-      handleRegionFields();
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
+      await handleRegionFields();
 
       if (region != null) {
         int regionStart = region.start!;
-        if (prefs.get(widget.path) != null) {
+        if (prefs?.get(widget.path) != null) {
           regionStart = int.parse(
-            prefs.getString(widget.path)?.split(':')[0] ?? '',
+            prefs?.getString(widget.path)?.split(':')[0] ?? '',
           );
         }
 
@@ -190,7 +219,10 @@ class EditorState extends State<Editor> {
         linebarController.jumpTo(0);
         scrollController.jumpTo(0);
       }
-      isLoading = false;
+      if (!mounted) return;
+      setState(() {
+        isLoading = false;
+      });
     });
 
     beforeController.language = widget.defaultLanguage;
@@ -199,7 +231,7 @@ class EditorState extends State<Editor> {
   }
 
   handleRegionFields() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final prefs = await _getPreferencesSafe();
     EditorRegionOptions? region = widget.options.regionOptions;
     String path = widget.path;
     String fileContent = widget.defaultValue;
@@ -208,9 +240,9 @@ class EditorState extends State<Editor> {
       int regionStart = region.start!;
       int regionEnd = region.end!;
 
-      if (prefs.get(path) != null) {
-        regionStart = int.parse(prefs.getString(path)?.split(':')[0] ?? '');
-        regionEnd = int.parse(prefs.getString(path)?.split(':')[1] ?? '');
+      if (prefs?.get(path) != null) {
+        regionStart = int.parse(prefs?.getString(path)?.split(':')[0] ?? '');
+        regionEnd = int.parse(prefs?.getString(path)?.split(':')[1] ?? '');
       }
 
       int lines = fileContent.split('\n').length;
@@ -242,7 +274,8 @@ class EditorState extends State<Editor> {
   }
 
   handleRegionCaching(String event, RegionPosition region) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final prefs = await _getPreferencesSafe();
+    if (prefs == null) return;
     late int beforeRegionLines;
     late int inRegionLines;
     late int newRegionlines;
