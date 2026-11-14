@@ -6,6 +6,8 @@ import 'package:phone_ide/editor/editor_options.dart';
 import 'package:phone_ide/highlighting/textmate_highlighter_registry.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'editor_test_helpers.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -16,27 +18,48 @@ void main() {
     });
 
     testWidgets('highlights HTML/CSS/JS and remains editable', (tester) async {
-      final samples = <String, String>{
-        'html': '<div class="x">hello</div>',
-        'css': 'body { color: red; }',
-        'javascript': 'const value = 42;',
-      };
+      final samples = [
+        (
+          language: 'html',
+          code: '<div class="x">hello</div>',
+          tokens: {
+            'div': const Color(0xFFE06C75),
+            'x': const Color(0xFF98C379)
+          },
+        ),
+        (
+          language: 'css',
+          code: 'body { color: red; }',
+          tokens: {
+            'body': const Color(0xFFE5C07B),
+            'red': const Color(0xFF98C379)
+          },
+        ),
+        (
+          language: 'javascript',
+          code: 'const value = 42;',
+          tokens: {
+            'const': const Color(0xFFC678DD),
+            '42': const Color(0xFFD19A66)
+          },
+        ),
+      ];
 
-      for (final entry in samples.entries) {
+      for (final sample in samples) {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
               body: Editor(
                 options: EditorOptions(showLinebar: false),
-                defaultLanguage: entry.key,
-                defaultValue: entry.value,
-                path: 'file.${entry.key}',
+                defaultLanguage: sample.language,
+                defaultValue: sample.code,
+                path: 'file.${sample.language}',
               ),
             ),
           ),
         );
 
-        await _pumpUntilLoaded(tester);
+        await settleEditor(tester);
 
         final state = tester.state<EditorState>(find.byType(Editor));
         final context = tester.element(find.byType(Editor));
@@ -46,12 +69,20 @@ void main() {
           withComposing: false,
         );
 
-        expect(_containsColorStyle(span), isTrue);
+        expect(span.toPlainText(), sample.code);
+        final colors = _characterColors(span);
+        for (final token in sample.tokens.entries) {
+          final start = sample.code.indexOf(token.key);
+          expect(colors.sublist(start, start + token.key.length),
+              everyElement(token.value),
+              reason:
+                  '${sample.language} token ${token.key} must use its syntax color.');
+        }
 
         final editorField = find.byWidgetPredicate(
           (widget) => widget is TextField && !widget.readOnly,
         );
-        final newText = '${entry.value}\n// edited';
+        final newText = '${sample.code}\n// edited';
         await tester.enterText(editorField, newText);
         await tester.pump();
 
@@ -80,7 +111,7 @@ void main() {
         ),
       );
 
-      await _pumpUntilLoaded(tester);
+      await settleEditor(tester);
 
       final state = tester.state<EditorState>(find.byType(Editor));
       final context = tester.element(find.byType(Editor));
@@ -107,14 +138,13 @@ void main() {
   });
 }
 
-bool _containsColorStyle(TextSpan span) {
-  if (span.style?.color != null) return true;
-  for (final child in span.children ?? const <InlineSpan>[]) {
-    if (child is TextSpan && _containsColorStyle(child)) {
-      return true;
-    }
-  }
-  return false;
+List<Color?> _characterColors(TextSpan span, [TextStyle? inherited]) {
+  final style = (inherited ?? const TextStyle()).merge(span.style);
+  return [
+    ...List<Color?>.filled(span.text?.length ?? 0, style.color),
+    for (final child in span.children ?? const <InlineSpan>[])
+      if (child is TextSpan) ..._characterColors(child, style),
+  ];
 }
 
 class _FailingAssetBundle extends CachingAssetBundle {
@@ -131,14 +161,4 @@ class _FailingAssetBundle extends CachingAssetBundle {
       StateError('Simulated load failure for $key'),
     );
   }
-}
-
-Future<void> _pumpUntilLoaded(WidgetTester tester) async {
-  for (var i = 0; i < 40; i++) {
-    await tester.pump(const Duration(milliseconds: 50));
-    if (find.byType(CircularProgressIndicator).evaluate().isEmpty) {
-      return;
-    }
-  }
-  fail('Editor did not finish loading in test.');
 }

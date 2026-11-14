@@ -13,6 +13,8 @@ void main() {
       expect(TextMateHighlighterRegistry.canonicalizeLanguage('htm'), 'html');
       expect(TextMateHighlighterRegistry.canonicalizeLanguage('css'), 'css');
       expect(
+          TextMateHighlighterRegistry.canonicalizeLanguage(' PY '), 'python');
+      expect(
           TextMateHighlighterRegistry.canonicalizeLanguage('JS'), 'javascript');
       expect(
         TextMateHighlighterRegistry.canonicalizeLanguage('javascript'),
@@ -30,12 +32,12 @@ void main() {
 
       final first = registry.buildTextSpan(
         text: 'print("hello")',
-        language: 'python',
+        language: 'unsupported',
         style: const TextStyle(),
       );
       final second = registry.buildTextSpan(
         text: 'print("world")',
-        language: 'python',
+        language: 'unsupported',
         style: const TextStyle(),
       );
 

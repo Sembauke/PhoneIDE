@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:phone_ide/editor/editor_syntax_theme.dart';
 import 'package:syntax_highlight/syntax_highlight.dart';
 
 typedef HighlighterLogger = void Function(String message);
@@ -43,6 +44,7 @@ class TextMateHighlighterRegistry {
     'html',
     'css',
     'javascript',
+    'python',
   };
 
   static const Map<String, String> _languageAliases = {
@@ -51,6 +53,8 @@ class TextMateHighlighterRegistry {
     'css': 'css',
     'javascript': 'javascript',
     'js': 'javascript',
+    'python': 'python',
+    'py': 'python',
   };
 
   static const Set<String> _regexKeys = {
@@ -59,6 +63,9 @@ class TextMateHighlighterRegistry {
     'end',
     'while',
   };
+
+  static const int _themeCacheCapacity = 8;
+  static const Set<String> _bracketCharacters = {'(', ')', '[', ']', '{', '}'};
 
   static const String _neverMatchingRegexPattern = r'^(?!x)x';
   static const String _scriptEmbedBeginPattern = r'(<script)(\s[^>]*?)?>';
@@ -86,6 +93,7 @@ class TextMateHighlighterRegistry {
   HighlighterTheme? _theme;
 
   final Map<String, Highlighter> _highlighters = {};
+  final _themedHighlighters = <EditorSyntaxTheme, Map<String, Highlighter>>{};
   final Set<String> _loggedUnsupportedLanguages = {};
   final Set<String> _loggedFallbackKeys = {};
 
@@ -155,7 +163,12 @@ class TextMateHighlighterRegistry {
     required String text,
     required String language,
     TextStyle? style,
+    EditorSyntaxTheme? syntaxTheme,
   }) {
+    if (syntaxTheme != null) {
+      style =
+          (style ?? const TextStyle()).copyWith(color: syntaxTheme.foreground);
+    }
     final canonicalLanguage = canonicalizeLanguage(language);
 
     if (canonicalLanguage == null) {
@@ -172,27 +185,30 @@ class TextMateHighlighterRegistry {
       return TextSpan(style: style, text: text);
     }
 
-    final highlighter = _highlighters[canonicalLanguage];
-    if (highlighter == null || _theme == null) {
-      _logFallback(
-        'missing-highlighter:$canonicalLanguage',
-        'phone_ide: Missing highlighter for "$canonicalLanguage", '
-            'using plain text fallback.',
-      );
-      return TextSpan(style: style, text: text);
-    }
-
     try {
-      if (canonicalLanguage == 'html') {
-        return _highlightHtmlWithEmbeddedBlocks(
-          text: text,
-          style: style,
-          htmlHighlighter: highlighter,
+      final highlighters = syntaxTheme == null
+          ? _highlighters
+          : _highlightersForTheme(syntaxTheme);
+      final highlighter = highlighters[canonicalLanguage];
+      if (highlighter == null || _theme == null) {
+        _logFallback(
+          'missing-highlighter:$canonicalLanguage',
+          'phone_ide: Missing highlighter for "$canonicalLanguage", '
+              'using plain text fallback.',
         );
+        return TextSpan(style: style, text: text);
       }
-
-      final highlighted = highlighter.highlight(text);
-      return TextSpan(style: style, children: [highlighted]);
+      final highlighted = canonicalLanguage == 'html'
+          ? _highlightHtmlWithEmbeddedBlocks(
+              text: text,
+              style: style,
+              htmlHighlighter: highlighter,
+              highlighters: highlighters,
+            )
+          : TextSpan(style: style, children: [highlighter.highlight(text)]);
+      return syntaxTheme == null
+          ? highlighted
+          : _applySyntaxTheme(highlighted, syntaxTheme, isRoot: true);
     } catch (error) {
       _logFallback(
         'highlight-error:$canonicalLanguage',
@@ -203,13 +219,36 @@ class TextMateHighlighterRegistry {
     }
   }
 
+  TextSpan _applySyntaxTheme(TextSpan span, EditorSyntaxTheme theme,
+      {bool isRoot = false}) {
+    // The outer span already has the caller's real style. Only engine-produced
+    // spans contain the opaque role markers used by the theme configuration.
+    final role = isRoot ? null : _SyntaxColor.fromMarker(span.style?.color);
+    // The engine emits unparsed brackets independently of its theme. Strings
+    // and comments retain their complete tokens, including literal brackets.
+    final color = !isRoot && _bracketCharacters.contains(span.text)
+        ? theme.punctuation
+        : role?.resolve(theme);
+    return TextSpan(
+      text: span.text,
+      style: color == null
+          ? span.style
+          : (span.style ?? const TextStyle()).copyWith(color: color),
+      children: span.children
+          ?.map((child) =>
+              child is TextSpan ? _applySyntaxTheme(child, theme) : child)
+          .toList(),
+    );
+  }
+
   TextSpan _highlightHtmlWithEmbeddedBlocks({
     required String text,
     required TextStyle? style,
     required Highlighter htmlHighlighter,
+    required Map<String, Highlighter> highlighters,
   }) {
-    final jsHighlighter = _highlighters['javascript'];
-    final cssHighlighter = _highlighters['css'];
+    final jsHighlighter = highlighters['javascript'];
+    final cssHighlighter = highlighters['css'];
 
     if (jsHighlighter == null || cssHighlighter == null) {
       final highlighted = htmlHighlighter.highlight(text);
@@ -276,6 +315,30 @@ class TextMateHighlighterRegistry {
     );
   }
 
+  Map<String, Highlighter> _highlightersForTheme(
+      EditorSyntaxTheme syntaxTheme) {
+    final cached = _themedHighlighters.remove(syntaxTheme);
+    if (cached != null) {
+      _themedHighlighters[syntaxTheme] = cached;
+      return cached;
+    }
+
+    final theme = HighlighterTheme.fromConfiguration(
+      jsonEncode(_themeConfiguration()),
+      const TextStyle(),
+    );
+    final highlighters = {
+      for (final language in supportedLanguages)
+        language: Highlighter(language: language, theme: theme),
+    };
+    // Keep simultaneous themes independent without retaining every theme ever used.
+    if (_themedHighlighters.length >= _themeCacheCapacity) {
+      _themedHighlighters.remove(_themedHighlighters.keys.first);
+    }
+    _themedHighlighters[syntaxTheme] = highlighters;
+    return highlighters;
+  }
+
   @visibleForTesting
   void configureForTests({
     AssetBundle? assetBundle,
@@ -288,6 +351,7 @@ class TextMateHighlighterRegistry {
     _initializeFuture = null;
     _theme = null;
     _highlighters.clear();
+    _themedHighlighters.clear();
     _loggedUnsupportedLanguages.clear();
     _loggedFallbackKeys.clear();
   }
@@ -571,6 +635,93 @@ class TextMateHighlighterRegistry {
 class _RegexSanitization {
   int replacedPatternCount = 0;
   final List<String> samples = [];
+}
+
+// syntax_highlight forces JSON colors opaque. Encode each semantic role as a
+// distinct RGB marker, then restore the original Color in the resulting spans.
+// Matching the requested RGB would conflate colors with different alpha values.
+enum _SyntaxColor {
+  foreground,
+  comment,
+  keyword,
+  string,
+  number,
+  type,
+  function,
+  tag,
+  attribute,
+  operator,
+  punctuation,
+  variable;
+
+  String get marker => '#${(index + 1).toRadixString(16).padLeft(6, '0')}';
+
+  static _SyntaxColor? fromMarker(Color? color) {
+    if (color == null) return null;
+    final index = color.toARGB32() - 0xFF000001;
+    return index >= 0 && index < values.length ? values[index] : null;
+  }
+
+  Color resolve(EditorSyntaxTheme theme) => switch (this) {
+        foreground => theme.foreground,
+        comment => theme.comment,
+        keyword => theme.keyword,
+        string => theme.string,
+        number => theme.number,
+        type => theme.type,
+        function => theme.function,
+        tag => theme.tag,
+        attribute => theme.attribute,
+        operator => theme.operator,
+        punctuation => theme.punctuation,
+        variable => theme.variable,
+      };
+}
+
+Map<String, Object?> _themeConfiguration() {
+  Map<String, Object?> rule(_SyntaxColor color, [List<String>? scopes]) => {
+        if (scopes != null) 'scope': scopes,
+        'settings': {'foreground': color.marker},
+      };
+
+  return {
+    'name': 'phone_ide_custom',
+    'settings': [
+      rule(_SyntaxColor.foreground),
+      rule(_SyntaxColor.comment, ['comment', 'punctuation.definition.comment']),
+      rule(_SyntaxColor.keyword, ['keyword', 'storage']),
+      rule(_SyntaxColor.string, [
+        'string',
+        'constant.character',
+        'support.constant.property-value',
+        'support.type.media-query',
+        'support.type.keyframes',
+      ]),
+      rule(_SyntaxColor.number, ['constant.numeric', 'constant.language']),
+      rule(_SyntaxColor.type, [
+        'entity.name.type',
+        'support.class',
+        'meta.selector',
+        'entity.name.selector',
+      ]),
+      rule(_SyntaxColor.function, ['entity.name.function', 'support.function']),
+      rule(_SyntaxColor.tag, ['entity.name.tag']),
+      rule(_SyntaxColor.attribute, [
+        'entity.other.attribute-name',
+        'support.type.property-name',
+        'meta.object-literal.key',
+      ]),
+      rule(_SyntaxColor.operator,
+          ['constant.character.entity', 'keyword.operator']),
+      rule(_SyntaxColor.punctuation, [
+        'punctuation.definition.tag',
+        'punctuation.definition.string',
+        'punctuation.terminator',
+        'meta.brace',
+      ]),
+      rule(_SyntaxColor.variable, ['variable']),
+    ],
+  };
 }
 
 const Map<String, Object?> _atomOneDarkThemeConfig = {

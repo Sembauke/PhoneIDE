@@ -1,3 +1,35 @@
+### 4.0.0 (unreleased)
+
+#### Breaking changes and migration
+
+- Require Flutter 3.29.0 or later.
+- `EditorOptions` and `EditorRegionOptions` are now immutable. Replace field assignments with `copyWith`, then rebuild the editor. Passing `null` explicitly clears a nullable option; omitting it retains the current value.
+- Invalid typography values now throw `ArgumentError` in all builds: `fontSize` and `lineHeight` must be finite and positive, and `linebarWidth` must be finite and nonnegative.
+- Removed the public `EditorState` implementation helpers `currentFileName`, `updateLineCount`, `handleFileInit`, `handleRegionFields`, `editorView`, `editorField`, and `linecountBar`. Read `Editor.path` for the file name, and rebuild `Editor` with the new `path`, `defaultValue`, or region boundaries to load different content. Use the `Editor` widget to render the complete editor; its gutter and fields are now internal.
+- Removed the unused `EditorState.getFontSize` helper. Use `MediaQuery.textScalerOf(context).scale(options.fontSize)` when a host needs the scaled font size.
+- `EditorState.getTextHeight` now uses `EditorOptions.fontSize` when its optional `fontSize` argument is omitted. It returns the scaled row height, including `EditorOptions.lineHeight`, rather than measuring a glyph. Pass an explicit `fontSize` if the host needs a different size.
+- The `EditorState` text and scroll controllers are now `final` and owned and disposed by the editor. Do not replace or dispose them. Existing controller reads and updates remain available; toolbar integrations can continue using `textfieldData`.
+- Removed the unused `Linebar`, `LinebarState`, and `Linebar.calculateTextSize` from `lib/editor/linebar.dart`. They were not exported by `phone_ide.dart`, but consumers importing that file directly must remove those imports. Use `EditorOptions.showLinebar` and the gutter options for the built-in gutter, or `TextPainter` for independent text measurement.
+- Code rows now use a fixed strut with a default `lineHeight` of `1.5` and honor accessibility text scaling. Review fixed-height host layouts, and set `EditorOptions.fontSize` and `lineHeight` explicitly when matching existing designs.
+- Host `InputDecorationTheme` no longer styles code fields. Configure editor, region, caret, selection, and gutter colors through `EditorOptions` and `EditorRegionOptions` instead. The default gutter border remains `#888888`; set `linebarBorderColor` to customize or hide it.
+- Taps on unused editor space or the gutter now focus the main editable field. Focus changes no longer emit `onTextChange` or `editableRegion`; use `textfieldData` for focus/controller notifications and the text streams only for actual edits.
+- Read-only editors reject toolbar/controller text mutations as well as keyboard edits. To replace read-only content, rebuild with a new `defaultValue`.
+
+#### Added and fixed
+
+- Add `EditorSyntaxTheme.atomOneDark` and `copyWith` for building custom palettes.
+- Preserve transparency in custom syntax colors, including colors with identical RGB values and different alpha.
+- Update the active-line highlight independently of document layout on cursor movement; cache horizontal width measurements until content or typography changes.
+- Preserve source line numbering around empty editable regions. Hide decorative gutter numbers from accessibility navigation.
+- Cover large documents, read-only toolbar input, initialization races, reseeding, subscription disposal, and active highlights after blur with behavior tests.
+- Add per-editor syntax, caret, selection, and active-line styling.
+- Add an optional leading border that spans the full editable region as it grows.
+- Focus the main editable field when tapping unused editor space or the gutter.
+- Add Python highlighting and preserve IME composing underlines.
+- Isolate code fields from host form decoration and replace gutter fields with text.
+- Keep source and gutter rows aligned with accessibility text scaling and horizontal scrolling.
+- Preserve edits and stream connections during live theme changes; stop reporting focus as a code edit.
+
 ### 3.0.0
 - feat: adds TextMate syntax highlighting for `html`, `css`, and `javascript`, including embedded styles/scripts inside HTML.
 - refactor: replaces `highlight` and `flutter_highlight` with `syntax_highlight`.
