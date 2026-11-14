@@ -69,6 +69,9 @@ EditorOptions(
   fontSize: 16,
   lineHeight: 1.5,
   linebarWidth: 28,
+  showIndentGuides: true,
+  indentSize: 4,
+  indentGuideColor: const Color(0x405E5470),
   syntaxTheme: const EditorSyntaxTheme(
     foreground: Color(0xFF2B2140),
     comment: Color(0xFF5E5470),
@@ -86,11 +89,47 @@ EditorOptions(
 );
 ```
 
-`lineHeight` is a font-size multiplier: 16 × 1.5 gives a 24 logical pixel row
-before accessibility scaling. `linebarWidth` is a minimum; the gutter grows for
+`lineHeight` is a font-size multiplier: 16 × 1.5 requests a nominal 24 logical
+pixel row before accessibility scaling. Native text layout supplies the actual
+row boxes for the gutter, highlight and guides; fallback fonts
+and pixel rounding can affect their height. `linebarWidth` is a minimum; the gutter grows for
 larger text or longer line numbers. Long source lines scroll horizontally.
 The editor supplies its own field decoration, independently of the host's
 `InputDecorationTheme`.
+
+Indentation guides are enabled by default; set `showIndentGuides: false` to hide
+them. `indentSize` must be positive and defaults to 4. Each complete level of
+leading indentation gets a guide at its beginning: eight leading spaces produce
+guides at columns 0 and 4. Leaving `indentGuideColor` null uses a subtle tint of
+`textColor`.
+
+Guide positions follow rendered spaces and tabs, including text scaling and
+horizontal scrolling. A tab advances to the next logical indent stop while
+retaining its native rendered width. Guides do not rewrite source whitespace.
+Blank rows use the surrounding code to determine their guides, including across
+editable-region boundaries. Adding or deleting spaces and tabs on a blank row
+does not change its guides. Recognized block openings include the new body's
+indentation; a following dedent limits the guides to the shared depth. At the end
+of a file, blank rows inherit the preceding code's indentation, including a new
+block's body. Guide geometry is cached, so moving the caret does not recompute it.
+
+Pressing Enter copies the current line's leading spaces and tabs to the new row
+and places the caret after them. Basic block-opening detection adds one further
+indent after Python block headers ending in `:`, or an opening `{`, `[` or `(`
+in Python, JavaScript, CSS and JSON. The extra indent uses `indentSize` spaces,
+or a tab when the existing indentation contains tabs. This is not a full syntax
+parser for non-Python languages. Python uses lexical context for block openings,
+continuations, clause alignment and terminal statements. Active IME composition
+is left intact.
+
+Python paste at indentation preserves the snippet's relative indentation,
+including the body of a block whose first line starts at column zero. Mid-line
+paste preserves the first row verbatim. Use `EditorState.paste(text,
+reindent: false)` for literal insertion.
+
+Backspace within leading whitespace removes indentation back to the previous
+`indentSize` stop. Tabs stay intact; selected text and deletions after code keep
+their normal behavior.
 
 Tapping unused editor space or the gutter focuses the main editable region and
 opens the keyboard. Direct taps on code keep their normal cursor placement;
@@ -128,6 +167,32 @@ If you listen to the widget's streams, move those subscriptions to the
 replacement `Editor` widget.
 The editor state disposes its internal controllers and listeners; callers retain
 ownership of subscriptions and public streams.
+
+### Python controls and options
+
+Hosts can connect their own controls through `EditorState.executeCommand`,
+`insertText`, `undo` and `redo`.
+
+| Option | Default | Purpose |
+| --- | --- | --- |
+| `showActiveIndentGuide` | `true` | Emphasize the caret's active Python block. |
+| `indentGuideStyle` | `IndentGuideStyle.solid` | Choose solid, dotted or dashed guides. |
+| `pythonIndentOptions` | `null` | Override Python indentation detection and tab display settings. |
+
+`PythonIndentOptions` is available from the public import. For example,
+`PythonIndentOptions(projectIndentSize: 2, projectUsesTabs: false)` overrides
+file-style detection. The host supplies project settings; the editor does not
+read `.editorconfig` itself. Python semantic tab stops remain eight columns;
+`projectTabWidth` changes their display width.
+
+### Undo
+
+Consecutive adjacent typing within one second shares an undo step. Commands,
+caret moves and composition form boundaries. Both Ctrl+Z / Ctrl+Shift+Z and
+Cmd+Z / Cmd+Shift+Z use the editor's Python undo history. In-memory history is
+limited to 100 entries and 2 MiB per region and direction. Older steps are
+discarded when those limits are reached. Hosts save source through the editor's
+text-change streams and supply it through `defaultValue` when reopening a file.
 
 ## Listening to Text Changes
 

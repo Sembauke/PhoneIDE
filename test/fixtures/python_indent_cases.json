@@ -1,0 +1,1422 @@
+[
+  {
+    "name": "nested blocks end their guides at dedent",
+    "source": "if ready:\n    if nested:\n        work()\n    done()\nfinish()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 2,
+        "guides": [
+          0,
+          4
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 3,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 4,
+        "guides": [],
+        "kind": "code"
+      }
+    ]
+  },
+  {
+    "name": "blank rows continue surrounding block guides",
+    "source": "if ready:\n    a()\n\n    \n    b()\nend()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 2,
+        "guides": [
+          0
+        ],
+        "kind": "blank"
+      },
+      {
+        "line": 3,
+        "guides": [
+          0
+        ],
+        "kind": "blank"
+      },
+      {
+        "line": 4,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 5,
+        "guides": [],
+        "kind": "code"
+      }
+    ]
+  },
+  {
+    "name": "unindented comments preserve enclosing block guides",
+    "source": "if ready:\n    if nested:\n        a()\n# comment\n        b()\nend()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 2,
+        "guides": [
+          0,
+          4
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 3,
+        "guides": [
+          0,
+          4
+        ],
+        "kind": "comment"
+      },
+      {
+        "line": 4,
+        "guides": [
+          0,
+          4
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 5,
+        "guides": [],
+        "kind": "code"
+      }
+    ]
+  },
+  {
+    "name": "hanging bracket continuations do not create indentation blocks",
+    "source": "def f():\n    total = compute(alpha,\n                    beta,\n)\n    return total",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 2,
+        "guides": [
+          0
+        ],
+        "kind": "continuation"
+      },
+      {
+        "line": 3,
+        "guides": [
+          0
+        ],
+        "kind": "continuation"
+      },
+      {
+        "line": 4,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      }
+    ]
+  },
+  {
+    "name": "explicit continuations retain enclosing guides",
+    "source": "if ready:\n    value = 1 + \\\n                   2\n    done()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 2,
+        "guides": [
+          0
+        ],
+        "kind": "continuation"
+      },
+      {
+        "line": 3,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      }
+    ]
+  },
+  {
+    "name": "multiline strings and continuations preserve enclosing guides",
+    "source": "def f():\n    q = \"\"\"\nSELECT 1\n\"\"\"\n    total = compute(alpha,\n                    beta)\n# commented_out()\n    return total",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 2,
+        "guides": [
+          0
+        ],
+        "kind": "stringInterior"
+      },
+      {
+        "line": 3,
+        "guides": [
+          0
+        ],
+        "kind": "stringInterior"
+      },
+      {
+        "line": 4,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 5,
+        "guides": [
+          0
+        ],
+        "kind": "continuation"
+      },
+      {
+        "line": 6,
+        "guides": [
+          0
+        ],
+        "kind": "comment"
+      },
+      {
+        "line": 7,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      }
+    ]
+  },
+  {
+    "name": "mixed indentation widths retain actual block columns",
+    "source": "if ready:\n  if nested:\n     work()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 2,
+        "guides": [
+          0,
+          2
+        ],
+        "kind": "code"
+      }
+    ]
+  },
+  {
+    "name": "a hash inside a string is not a comment",
+    "source": "if ready:\n    value = \"# not a comment\"\n    done()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 2,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      }
+    ]
+  },
+  {
+    "name": "commented quotes and backslashes do not alter lexer state",
+    "source": "if ready:\n    # \"\"\" \\\n    done()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "comment"
+      },
+      {
+        "line": 2,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      }
+    ]
+  },
+  {
+    "name": "mixed tab indentation uses Python semantic columns",
+    "source": "if ready:\n \tif nested:\n\t\twork()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 2,
+        "guides": [
+          0,
+          8
+        ],
+        "kind": "code"
+      }
+    ],
+    "diagnostics": [
+      {
+        "line": 1,
+        "code": "mixedIndentation"
+      }
+    ]
+  },
+  {
+    "name": "indentation size is inferred from the source",
+    "source": "if ready:\n   if nested:\n      work()\n   done()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 2,
+        "guides": [
+          0,
+          3
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 3,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      }
+    ],
+    "effectiveIndentSize": 3
+  },
+  {
+    "name": "empty input uses the default indentation size",
+    "source": "",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "blank"
+      }
+    ],
+    "effectiveIndentSize": 4
+  },
+  {
+    "name": "non-Python leading whitespace is diagnosed",
+    "source": "if ready:\n     work()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      }
+    ],
+    "diagnostics": [
+      {
+        "line": 1,
+        "code": "invalidWhitespace"
+      }
+    ]
+  },
+  {
+    "name": "a leading byte-order mark does not hide a block header",
+    "source": "﻿if ready:\n    work()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      }
+    ]
+  },
+  {
+    "name": "form feeds reset indentation columns",
+    "source": "\fif ready:\n\f    work()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      }
+    ]
+  },
+  {
+    "name": "CRLF source retains correct guide rows",
+    "source": "if ready:\r\n    work()\r\n",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 2,
+        "guides": [],
+        "kind": "blank"
+      }
+    ]
+  },
+  {
+    "name": "bare CR source retains correct guide rows",
+    "source": "if ready:\r    work()\r\r",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 2,
+        "guides": [],
+        "kind": "blank"
+      },
+      {
+        "line": 3,
+        "guides": [],
+        "kind": "blank"
+      }
+    ]
+  },
+  {
+    "name": "trailing blank rows retain the completed block guides",
+    "source": "if ready:\n    work()\n\n",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 2,
+        "guides": [],
+        "kind": "blank"
+      },
+      {
+        "line": 3,
+        "guides": [],
+        "kind": "blank"
+      }
+    ]
+  },
+  {
+    "name": "a blank caret row after a header has its prospective guide",
+    "source": "if ready:\n    ",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [],
+        "kind": "blank"
+      }
+    ],
+    "caret": {
+      "offset": 14,
+      "line": 1,
+      "guides": [
+        0
+      ]
+    }
+  },
+  {
+    "name": "trailing comments retain enclosing block guides",
+    "source": "if ready:\n    work()\n    # trailing\n",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 2,
+        "guides": [
+          0
+        ],
+        "kind": "comment"
+      },
+      {
+        "line": 3,
+        "guides": [],
+        "kind": "blank"
+      }
+    ]
+  },
+  {
+    "name": "raw multiline strings do not introduce blocks",
+    "source": "if ready:\n    value = r\"\"\"\n  text\n\"\"\"\n    done()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 2,
+        "guides": [
+          0
+        ],
+        "kind": "stringInterior"
+      },
+      {
+        "line": 3,
+        "guides": [
+          0
+        ],
+        "kind": "stringInterior"
+      },
+      {
+        "line": 4,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      }
+    ]
+  },
+  {
+    "name": "formatted multiline strings retain surrounding guides",
+    "source": "if ready:\n    value = f\"\"\"\n  text\n\"\"\"\n    done()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 2,
+        "guides": [
+          0
+        ],
+        "kind": "stringInterior"
+      },
+      {
+        "line": 3,
+        "guides": [
+          0
+        ],
+        "kind": "stringInterior"
+      },
+      {
+        "line": 4,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      }
+    ]
+  },
+  {
+    "name": "escaped quote sequences do not end multiline strings",
+    "source": "if ready:\n    value = \"\"\"escaped \\\"\"\ntext\n\"\"\"\n    done()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 2,
+        "guides": [
+          0
+        ],
+        "kind": "stringInterior"
+      },
+      {
+        "line": 3,
+        "guides": [
+          0
+        ],
+        "kind": "stringInterior"
+      },
+      {
+        "line": 4,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      }
+    ]
+  },
+  {
+    "name": "nested quotes in f-string expressions preserve lexer state",
+    "source": "if ready:\n    value = f\"{record[\"name\"]}\"\n    done()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 2,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      }
+    ]
+  },
+  {
+    "name": "multiline f-string expressions can contain comments",
+    "source": "if ready:\n    value = f\"{\n    record[\"name\"] # note\n}\"\n    done()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 2,
+        "guides": [
+          0
+        ],
+        "kind": "stringInterior"
+      },
+      {
+        "line": 3,
+        "guides": [
+          0
+        ],
+        "kind": "stringInterior"
+      },
+      {
+        "line": 4,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      }
+    ]
+  },
+  {
+    "name": "escaped newlines keep single-quoted strings open",
+    "source": "if ready:\n    value = 'hello\\\nworld'\n    done()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 2,
+        "guides": [
+          0
+        ],
+        "kind": "stringInterior"
+      },
+      {
+        "line": 3,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      }
+    ]
+  },
+  {
+    "name": "a zero-column bracket continuation does not dedent its block",
+    "source": "if ready:\n    value = (\n0\n)\n    done()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 2,
+        "guides": [
+          0
+        ],
+        "kind": "continuation"
+      },
+      {
+        "line": 3,
+        "guides": [
+          0
+        ],
+        "kind": "continuation"
+      },
+      {
+        "line": 4,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      }
+    ]
+  },
+  {
+    "name": "dictionary colons are not block headers",
+    "source": "value = {\"a\": 1}",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      }
+    ],
+    "opensBlock": [
+      false
+    ]
+  },
+  {
+    "name": "f-string format colons are not block headers",
+    "source": "value = f\"{a:03}\"",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      }
+    ],
+    "opensBlock": [
+      false
+    ]
+  },
+  {
+    "name": "commented block headers do not open blocks",
+    "source": "# if ready:",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "comment"
+      }
+    ],
+    "opensBlock": [
+      false
+    ]
+  },
+  {
+    "name": "a trailing comment does not hide a block opener",
+    "source": "if ready: # note\n    work()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      }
+    ],
+    "opensBlock": [
+      true,
+      false
+    ]
+  },
+  {
+    "name": "a completed inline suite does not open a multiline block",
+    "source": "if ready: return",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      }
+    ],
+    "opensBlock": [
+      false
+    ]
+  },
+  {
+    "name": "a multiline function header opens a single block",
+    "source": "def f(\n    value,\n) -> int:\n    return value",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [],
+        "kind": "continuation"
+      },
+      {
+        "line": 2,
+        "guides": [],
+        "kind": "continuation"
+      },
+      {
+        "line": 3,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      }
+    ],
+    "opensBlock": [
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  {
+    "name": "else branches receive separate guides",
+    "source": "if ready:\n    work()\nelse:\n    other()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 2,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 3,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      }
+    ]
+  },
+  {
+    "name": "exception handlers receive separate guides",
+    "source": "try:\n    work()\nexcept Exception:\n    other()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 2,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 3,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      }
+    ]
+  },
+  {
+    "name": "match cases retain their parent guide and separate branch guides",
+    "source": "match value:\n    case 1:\n        first()\n    case _:\n        second()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 2,
+        "guides": [
+          0,
+          4
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 3,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 4,
+        "guides": [
+          0,
+          4
+        ],
+        "kind": "code"
+      }
+    ]
+  },
+  {
+    "name": "a soft keyword used as a variable does not open a block",
+    "source": "match = 3",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      }
+    ],
+    "opensBlock": [
+      false
+    ]
+  },
+  {
+    "name": "invalid dedents recover at the next valid block column",
+    "source": "if ready:\n    if nested:\n        work()\n      wrong()\n    recovered()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 2,
+        "guides": [
+          0,
+          4
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 3,
+        "guides": [
+          0,
+          4
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 4,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      }
+    ],
+    "diagnostics": [
+      {
+        "line": 3,
+        "code": "inconsistentDedent"
+      }
+    ]
+  },
+  {
+    "name": "unexpected indentation does not invent a block",
+    "source": "work()\n   unexpected()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      }
+    ]
+  },
+  {
+    "name": "an unfinished block header is still recognized",
+    "source": "if ready:",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      }
+    ],
+    "opensBlock": [
+      true
+    ]
+  },
+  {
+    "name": "whitespace-only files have no structural guides",
+    "source": "\n \t\n",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "blank"
+      },
+      {
+        "line": 1,
+        "guides": [],
+        "kind": "blank"
+      },
+      {
+        "line": 2,
+        "guides": [],
+        "kind": "blank"
+      }
+    ]
+  },
+  {
+    "name": "initial indentation does not invent a parent block",
+    "source": "   first()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      }
+    ]
+  },
+  {
+    "name": "project tab style overrides source inference",
+    "source": "if ready:\n    work()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      }
+    ],
+    "options": {
+      "projectUsesTabs": true
+    },
+    "usesTabs": true
+  },
+  {
+    "name": "project indentation size overrides source inference",
+    "source": "if ready:\n  work()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      }
+    ],
+    "options": {
+      "projectIndentSize": 3
+    },
+    "effectiveIndentSize": 3
+  },
+  {
+    "name": "tab display width is independent of Python semantic columns",
+    "source": "if ready:\n\tif nested:\n\t\twork()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 2,
+        "guides": [
+          0,
+          8
+        ],
+        "kind": "code"
+      }
+    ],
+    "options": {
+      "projectTabWidth": 3
+    },
+    "displayGuideColumns": [
+      [],
+      [
+        0
+      ],
+      [
+        0,
+        3
+      ]
+    ]
+  },
+  {
+    "name": "two-space source indentation is inferred",
+    "source": "if ready:\n  work()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      }
+    ],
+    "effectiveIndentSize": 2
+  },
+  {
+    "name": "notebook magic lines do not alter ordinary Python blocks",
+    "source": "%time value\n!echo value\nif ready:\n    work()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 2,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 3,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      }
+    ],
+    "options": {
+      "notebook": true
+    }
+  },
+  {
+    "name": "notebook magic punctuation does not alter lexer state",
+    "source": "if ready:\n    %time value([\\\n    work()\nafter()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 2,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 3,
+        "guides": [],
+        "kind": "code"
+      }
+    ],
+    "options": {
+      "notebook": true
+    },
+    "opensBlock": [
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  {
+    "name": "snippet guides begin at their configured base indentation",
+    "source": "    if ready:\n        work()",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          4
+        ],
+        "kind": "code"
+      }
+    ],
+    "options": {
+      "baseIndent": 4
+    }
+  },
+  {
+    "name": "read-only rows have no prospective or active guides",
+    "source": "if ready:\n    work()\n    ",
+    "lines": [
+      {
+        "line": 0,
+        "guides": [],
+        "kind": "code"
+      },
+      {
+        "line": 1,
+        "guides": [
+          0
+        ],
+        "kind": "code"
+      },
+      {
+        "line": 2,
+        "guides": [],
+        "kind": "blank"
+      }
+    ],
+    "readOnly": true,
+    "caret": {
+      "offset": 25,
+      "line": 2,
+      "guides": []
+    }
+  }
+]

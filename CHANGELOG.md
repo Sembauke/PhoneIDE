@@ -4,10 +4,10 @@
 
 - Require Flutter 3.29.0 or later.
 - `EditorOptions` and `EditorRegionOptions` are now immutable. Replace field assignments with `copyWith`, then rebuild the editor. Passing `null` explicitly clears a nullable option; omitting it retains the current value.
-- Invalid typography values now throw `ArgumentError` in all builds: `fontSize` and `lineHeight` must be finite and positive, and `linebarWidth` must be finite and nonnegative.
+- Invalid typography values now throw `ArgumentError` in all builds: `fontSize` and `lineHeight` must be finite and positive, and `linebarWidth` must be finite and nonnegative. Indentation sizes must also be positive.
 - Removed the public `EditorState` implementation helpers `currentFileName`, `updateLineCount`, `handleFileInit`, `handleRegionFields`, `editorView`, `editorField`, and `linecountBar`. Read `Editor.path` for the file name, and rebuild `Editor` with the new `path`, `defaultValue`, or region boundaries to load different content. Use the `Editor` widget to render the complete editor; its gutter and fields are now internal.
 - Removed the unused `EditorState.getFontSize` helper. Use `MediaQuery.textScalerOf(context).scale(options.fontSize)` when a host needs the scaled font size.
-- `EditorState.getTextHeight` now uses `EditorOptions.fontSize` when its optional `fontSize` argument is omitted. It returns the scaled row height, including `EditorOptions.lineHeight`, rather than measuring a glyph. Pass an explicit `fontSize` if the host needs a different size.
+- `EditorState.getTextHeight` now uses `EditorOptions.fontSize` when its optional `double? fontSize` argument is omitted. It returns the nominal scaled typography height, including `EditorOptions.lineHeight` and editor zoom, rather than measuring a glyph. Actual row positions come from native text layout.
 - The `EditorState` text and scroll controllers are now `final` and owned and disposed by the editor. Do not replace or dispose them. Existing controller reads and updates remain available; toolbar integrations can continue using `textfieldData`.
 - Removed the unused `Linebar`, `LinebarState`, and `Linebar.calculateTextSize` from `lib/editor/linebar.dart`. They were not exported by `phone_ide.dart`, but consumers importing that file directly must remove those imports. Use `EditorOptions.showLinebar` and the gutter options for the built-in gutter, or `TextPainter` for independent text measurement.
 - Code rows now use a fixed strut with a default `lineHeight` of `1.5` and honor accessibility text scaling. Review fixed-height host layouts, and set `EditorOptions.fontSize` and `lineHeight` explicitly when matching existing designs.
@@ -19,10 +19,19 @@
 
 - Add `EditorSyntaxTheme.atomOneDark` and `copyWith` for building custom palettes.
 - Preserve transparency in custom syntax colors, including colors with identical RGB values and different alpha.
+- Export `PythonIndentOptions` from the public library.
+- Fix hardware arrow boundary navigation, read-only shortcut interception, multi-character IME commits, snippet paste indentation, composition-aware bracket pairing, tab-indented editing and mixed-selection dedent.
+- Keep gutter offsets and cached native row geometry during edits. Preserve pending deferred formatting when the caret moves.
+- Bound and group Python undo history, and support Cmd undo/redo alongside Ctrl shortcuts.
+- Reuse unchanged line widths and guide painters, coalesce background analysis through one worker, reuse pending lexical models, and avoid delaying guide updates for ordinary typing inside open brackets.
+- Compare incremental models over seeded edits, retain deterministic Python editing regressions, and exclude test fixtures from the published package.
+- Add indentation guides, enabled by default, with configurable size and color, rendered space/tab alignment, and blank-line continuity across editable regions; derive blank-row guides from surrounding code and recognized block openings independently of blank whitespace, and cache geometry independently of caret movement.
+- Preserve leading indentation and caret placement on Enter, with lexical Python indentation and basic opening-delimiter detection for JavaScript, CSS and JSON. Preserve active IME composition; Python paste retains relative snippet indentation.
+- Move Backspace to the previous indentation stop within leading whitespace, preserving normal text deletion, selections and active IME composition.
 - Update the active-line highlight independently of document layout on cursor movement; cache horizontal width measurements until content or typography changes.
-- Preserve source line numbering around empty editable regions. Hide decorative gutter numbers from accessibility navigation.
+- Keep source line numbering correct around empty editable regions and expose line-number accessibility labels for Python and other languages.
 - Cover large documents, read-only toolbar input, initialization races, reseeding, subscription disposal, and active highlights after blur with behavior tests.
-- Add per-editor syntax, caret, selection, and active-line styling.
+- Add per-editor syntax, caret, selection and active-line styling.
 - Add an optional leading border that spans the full editable region as it grows.
 - Focus the main editable field when tapping unused editor space or the gutter.
 - Add Python highlighting and preserve IME composing underlines.

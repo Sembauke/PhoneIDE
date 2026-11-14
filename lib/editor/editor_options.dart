@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:phone_ide/editor/editor_syntax_theme.dart';
+import 'package:phone_ide/editor/python_indentation.dart';
+
+enum IndentGuideStyle { solid, dotted, dashed }
 
 const _unchanged = Object();
 
@@ -17,6 +20,13 @@ class EditorOptions {
     this.selectionHandleColor,
     this.activeLineColor,
     this.activeLineBorderColor,
+    this.showIndentGuides = true,
+    this.indentSize = 4,
+    this.indentGuideColor,
+    this.showActiveIndentGuide = true,
+    this.activeIndentGuideColor,
+    this.indentGuideStyle = IndentGuideStyle.solid,
+    this.pythonIndentOptions,
     this.fontSize = 18,
     this.lineHeight = 1.5,
     this.linebarWidth = 28,
@@ -38,6 +48,7 @@ class EditorOptions {
       throw ArgumentError.value(
           linebarWidth, 'linebarWidth', 'Must be finite and nonnegative');
     }
+    if (indentSize <= 0) throw ArgumentError.value(indentSize, 'indentSize');
   }
 
   final Color backgroundColor;
@@ -52,6 +63,23 @@ class EditorOptions {
   /// Optional background and 3 logical pixel leading stripe for the caret row.
   final Color? activeLineColor;
   final Color? activeLineBorderColor;
+
+  /// Draw structural guides for Python and whitespace guides for other languages.
+  final bool showIndentGuides;
+
+  /// Fallback indentation unit. Python detects the file style unless overridden
+  /// by [pythonIndentOptions].
+  final int indentSize;
+
+  /// Null uses a subtle tint of [textColor].
+  final Color? indentGuideColor;
+  final bool showActiveIndentGuide;
+  final Color? activeIndentGuideColor;
+  final IndentGuideStyle indentGuideStyle;
+
+  /// Project overrides take priority over file detection and user defaults.
+  /// The host reads .editorconfig; the editor never guesses a filesystem path.
+  final PythonIndentOptions? pythonIndentOptions;
 
   final double fontSize;
 
@@ -79,6 +107,13 @@ class EditorOptions {
     Object? selectionHandleColor = _unchanged,
     Object? activeLineColor = _unchanged,
     Object? activeLineBorderColor = _unchanged,
+    bool? showIndentGuides,
+    int? indentSize,
+    Object? indentGuideColor = _unchanged,
+    bool? showActiveIndentGuide,
+    Object? activeIndentGuideColor = _unchanged,
+    IndentGuideStyle? indentGuideStyle,
+    Object? pythonIndentOptions = _unchanged,
     double? fontSize,
     double? lineHeight,
     double? linebarWidth,
@@ -110,6 +145,20 @@ class EditorOptions {
         activeLineBorderColor: identical(activeLineBorderColor, _unchanged)
             ? this.activeLineBorderColor
             : activeLineBorderColor as Color?,
+        showIndentGuides: showIndentGuides ?? this.showIndentGuides,
+        indentSize: indentSize ?? this.indentSize,
+        indentGuideColor: identical(indentGuideColor, _unchanged)
+            ? this.indentGuideColor
+            : indentGuideColor as Color?,
+        showActiveIndentGuide:
+            showActiveIndentGuide ?? this.showActiveIndentGuide,
+        activeIndentGuideColor: identical(activeIndentGuideColor, _unchanged)
+            ? this.activeIndentGuideColor
+            : activeIndentGuideColor as Color?,
+        indentGuideStyle: indentGuideStyle ?? this.indentGuideStyle,
+        pythonIndentOptions: identical(pythonIndentOptions, _unchanged)
+            ? this.pythonIndentOptions
+            : pythonIndentOptions as PythonIndentOptions?,
         fontSize: fontSize ?? this.fontSize,
         lineHeight: lineHeight ?? this.lineHeight,
         linebarWidth: linebarWidth ?? this.linebarWidth,
@@ -140,6 +189,13 @@ class EditorOptions {
       selectionHandleColor == other.selectionHandleColor &&
       activeLineColor == other.activeLineColor &&
       activeLineBorderColor == other.activeLineBorderColor &&
+      showIndentGuides == other.showIndentGuides &&
+      indentSize == other.indentSize &&
+      indentGuideColor == other.indentGuideColor &&
+      showActiveIndentGuide == other.showActiveIndentGuide &&
+      activeIndentGuideColor == other.activeIndentGuideColor &&
+      indentGuideStyle == other.indentGuideStyle &&
+      pythonIndentOptions == other.pythonIndentOptions &&
       fontSize == other.fontSize &&
       lineHeight == other.lineHeight &&
       linebarWidth == other.linebarWidth &&
@@ -162,6 +218,13 @@ class EditorOptions {
         selectionHandleColor,
         activeLineColor,
         activeLineBorderColor,
+        showIndentGuides,
+        indentSize,
+        indentGuideColor,
+        showActiveIndentGuide,
+        activeIndentGuideColor,
+        indentGuideStyle,
+        pythonIndentOptions,
         fontSize,
         lineHeight,
         linebarWidth,

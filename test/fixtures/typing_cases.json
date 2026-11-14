@@ -1,0 +1,1606 @@
+{
+  "schema_version": 1,
+  "description": "Literal input/output fixtures for Python editing regression tests.",
+  "cases": [
+    {
+      "name": "ordinary Enter copies indentation",
+      "initial": {
+        "text": "    work",
+        "selectionStart": 8,
+        "selectionEnd": 8
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "\n"
+        }
+      ],
+      "expected": {
+        "text": "    work\n    ",
+        "selectionStart": 13,
+        "selectionEnd": 13
+      }
+    },
+    {
+      "name": "block colon adds an indentation unit",
+      "initial": {
+        "text": "if ready:",
+        "selectionStart": 9,
+        "selectionEnd": 9
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "\n"
+        }
+      ],
+      "expected": {
+        "text": "if ready:\n    ",
+        "selectionStart": 14,
+        "selectionEnd": 14
+      }
+    },
+    {
+      "name": "trailing comment preserves block opener",
+      "initial": {
+        "text": "if ready: # reason",
+        "selectionStart": 18,
+        "selectionEnd": 18
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "\n"
+        }
+      ],
+      "expected": {
+        "text": "if ready: # reason\n    ",
+        "selectionStart": 23,
+        "selectionEnd": 23
+      }
+    },
+    {
+      "name": "quoted colon is not a block",
+      "initial": {
+        "text": "    message = \":\"",
+        "selectionStart": 17,
+        "selectionEnd": 17
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "\n"
+        }
+      ],
+      "expected": {
+        "text": "    message = \":\"\n    ",
+        "selectionStart": 22,
+        "selectionEnd": 22
+      }
+    },
+    {
+      "name": "dict colon is a bracket continuation",
+      "initial": {
+        "text": "d = {\"a\":",
+        "selectionStart": 9,
+        "selectionEnd": 9
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "\n"
+        }
+      ],
+      "expected": {
+        "text": "d = {\"a\":\n    ",
+        "selectionStart": 14,
+        "selectionEnd": 14
+      }
+    },
+    {
+      "name": "complete return result dedents",
+      "initial": {
+        "text": "if ready:\n    return result",
+        "selectionStart": 27,
+        "selectionEnd": 27
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "\n"
+        }
+      ],
+      "expected": {
+        "text": "if ready:\n    return result\n",
+        "selectionStart": 28,
+        "selectionEnd": 28
+      }
+    },
+    {
+      "name": "incomplete return expression stays in continuation",
+      "initial": {
+        "text": "if ready:\n    return (",
+        "selectionStart": 22,
+        "selectionEnd": 22
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "\n"
+        }
+      ],
+      "expected": {
+        "text": "if ready:\n    return (\n        ",
+        "selectionStart": 31,
+        "selectionEnd": 31
+      }
+    },
+    {
+      "name": "backslash uses hanging indentation",
+      "initial": {
+        "text": "    total = first + \\",
+        "selectionStart": 21,
+        "selectionEnd": 21
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "\n"
+        }
+      ],
+      "expected": {
+        "text": "    total = first + \\\n        ",
+        "selectionStart": 30,
+        "selectionEnd": 30
+      }
+    },
+    {
+      "name": "Enter inside a string preserves only base indent",
+      "initial": {
+        "text": "    text = \"if ready:",
+        "selectionStart": 21,
+        "selectionEnd": 21
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "\n"
+        }
+      ],
+      "expected": {
+        "text": "    text = \"if ready:\n    ",
+        "selectionStart": 26,
+        "selectionEnd": 26
+      }
+    },
+    {
+      "name": "Enter inside a comment does not infer a block",
+      "initial": {
+        "text": "    # if ready:",
+        "selectionStart": 15,
+        "selectionEnd": 15
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "\n"
+        }
+      ],
+      "expected": {
+        "text": "    # if ready:\n    ",
+        "selectionStart": 20,
+        "selectionEnd": 20
+      }
+    },
+    {
+      "name": "mid-line Enter moves the suffix",
+      "initial": {
+        "text": "    alpha + beta",
+        "selectionStart": 9,
+        "selectionEnd": 9
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "\n"
+        }
+      ],
+      "expected": {
+        "text": "    alpha\n     + beta",
+        "selectionStart": 14,
+        "selectionEnd": 14
+      }
+    },
+    {
+      "name": "Enter inside indentation preserves the real line",
+      "initial": {
+        "text": "    work",
+        "selectionStart": 2,
+        "selectionEnd": 2
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "\n"
+        }
+      ],
+      "expected": {
+        "text": "\n    work",
+        "selectionStart": 3,
+        "selectionEnd": 3
+      }
+    },
+    {
+      "name": "Enter strips the old whitespace-only line",
+      "initial": {
+        "text": "    ",
+        "selectionStart": 4,
+        "selectionEnd": 4
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "\n"
+        }
+      ],
+      "expected": {
+        "text": "\n    ",
+        "selectionStart": 5,
+        "selectionEnd": 5
+      }
+    },
+    {
+      "name": "Enter first removes its selection",
+      "initial": {
+        "text": "    alpha discard + beta",
+        "selectionStart": 9,
+        "selectionEnd": 17
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "\n"
+        }
+      ],
+      "expected": {
+        "text": "    alpha\n     + beta",
+        "selectionStart": 14,
+        "selectionEnd": 14
+      }
+    },
+    {
+      "name": "Enter between ()",
+      "initial": {
+        "text": "    call()",
+        "selectionStart": 9,
+        "selectionEnd": 9
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "\n"
+        }
+      ],
+      "expected": {
+        "text": "    call(\n        \n    )",
+        "selectionStart": 18,
+        "selectionEnd": 18
+      }
+    },
+    {
+      "name": "Enter between triple quotes adds no level",
+      "initial": {
+        "text": "    \"\"\"\"\"\"",
+        "selectionStart": 7,
+        "selectionEnd": 7
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "\n"
+        }
+      ],
+      "expected": {
+        "text": "    \"\"\"\n    \"\"\"",
+        "selectionStart": 12,
+        "selectionEnd": 12
+      }
+    },
+    {
+      "name": "Enter honors project indentation size",
+      "initial": {
+        "text": "if ready:",
+        "selectionStart": 9,
+        "selectionEnd": 9
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "\n"
+        }
+      ],
+      "expected": {
+        "text": "if ready:\n  ",
+        "selectionStart": 12,
+        "selectionEnd": 12
+      },
+      "options": {
+        "projectIndentSize": 2
+      }
+    },
+    {
+      "name": "Enter preserves tab style",
+      "initial": {
+        "text": "if ready:\n\tif nested:",
+        "selectionStart": 21,
+        "selectionEnd": 21
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "\n"
+        }
+      ],
+      "expected": {
+        "text": "if ready:\n\tif nested:\n\t\t",
+        "selectionStart": 24,
+        "selectionEnd": 24
+      }
+    },
+    {
+      "name": "indent command shifts the whole line",
+      "initial": {
+        "text": "alpha",
+        "selectionStart": 2,
+        "selectionEnd": 2
+      },
+      "operations": [
+        {
+          "type": "command",
+          "command": "indent"
+        }
+      ],
+      "expected": {
+        "text": "    alpha",
+        "selectionStart": 6,
+        "selectionEnd": 6
+      }
+    },
+    {
+      "name": "dedent command preserves relative caret position",
+      "initial": {
+        "text": "    alpha",
+        "selectionStart": 6,
+        "selectionEnd": 6
+      },
+      "operations": [
+        {
+          "type": "command",
+          "command": "dedent"
+        }
+      ],
+      "expected": {
+        "text": "alpha",
+        "selectionStart": 2,
+        "selectionEnd": 2
+      }
+    },
+    {
+      "name": "selected lines shift uniformly including string data",
+      "initial": {
+        "text": "def f():\n    text = \"\"\"\nraw data\n\"\"\"\n    return text",
+        "selectionStart": 0,
+        "selectionEnd": 52
+      },
+      "operations": [
+        {
+          "type": "command",
+          "command": "indent"
+        }
+      ],
+      "expected": {
+        "text": "    def f():\n        text = \"\"\"\n    raw data\n    \"\"\"\n        return text",
+        "selectionStart": 4,
+        "selectionEnd": 72
+      }
+    },
+    {
+      "name": "selected dedent clamps each code line independently",
+      "initial": {
+        "text": "  first\n      second",
+        "selectionStart": 0,
+        "selectionEnd": 20
+      },
+      "operations": [
+        {
+          "type": "command",
+          "command": "dedent"
+        }
+      ],
+      "expected": {
+        "text": "first\n  second",
+        "selectionStart": 0,
+        "selectionEnd": 14
+      }
+    },
+    {
+      "name": "column-zero comments do not limit selected code dedent",
+      "initial": {
+        "text": "# note\n    work",
+        "selectionStart": 0,
+        "selectionEnd": 15
+      },
+      "operations": [
+        {
+          "type": "command",
+          "command": "dedent"
+        }
+      ],
+      "expected": {
+        "text": "# note\nwork",
+        "selectionStart": 0,
+        "selectionEnd": 11
+      }
+    },
+    {
+      "name": "selection indentation skips blank rows",
+      "initial": {
+        "text": "first\n\n    second",
+        "selectionStart": 0,
+        "selectionEnd": 17
+      },
+      "operations": [
+        {
+          "type": "command",
+          "command": "indent"
+        }
+      ],
+      "expected": {
+        "text": "    first\n\n        second",
+        "selectionStart": 4,
+        "selectionEnd": 25
+      }
+    },
+    {
+      "name": "selection ending at column zero excludes last row",
+      "initial": {
+        "text": "first\nsecond",
+        "selectionStart": 0,
+        "selectionEnd": 6
+      },
+      "operations": [
+        {
+          "type": "command",
+          "command": "indent"
+        }
+      ],
+      "expected": {
+        "text": "    first\nsecond",
+        "selectionStart": 4,
+        "selectionEnd": 10
+      }
+    },
+    {
+      "name": "else dedents on completion",
+      "initial": {
+        "text": "if ready:\n    work\n    else",
+        "selectionStart": 27,
+        "selectionEnd": 27
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": ":"
+        }
+      ],
+      "expected": {
+        "text": "if ready:\n    work\nelse:",
+        "selectionStart": 24,
+        "selectionEnd": 24
+      }
+    },
+    {
+      "name": "except dedents on completion",
+      "initial": {
+        "text": "try:\n    work\n    except",
+        "selectionStart": 24,
+        "selectionEnd": 24
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": ":"
+        }
+      ],
+      "expected": {
+        "text": "try:\n    work\nexcept:",
+        "selectionStart": 21,
+        "selectionEnd": 21
+      }
+    },
+    {
+      "name": "case dedents on completion",
+      "initial": {
+        "text": "match value:\n    case 1:\n        work\n        case",
+        "selectionStart": 50,
+        "selectionEnd": 50
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": ":"
+        }
+      ],
+      "expected": {
+        "text": "match value:\n    case 1:\n        work\n    case:",
+        "selectionStart": 47,
+        "selectionEnd": 47
+      }
+    },
+    {
+      "name": "else completes on space",
+      "initial": {
+        "text": "if ready:\n    work\n    else",
+        "selectionStart": 27,
+        "selectionEnd": 27
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": " "
+        }
+      ],
+      "expected": {
+        "text": "if ready:\n    work\nelse ",
+        "selectionStart": 24,
+        "selectionEnd": 24
+      }
+    },
+    {
+      "name": "elsewhere does not dedent",
+      "initial": {
+        "text": "if ready:\n    elsewhere",
+        "selectionStart": 23,
+        "selectionEnd": 23
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": " "
+        }
+      ],
+      "expected": {
+        "text": "if ready:\n    elsewhere ",
+        "selectionStart": 24,
+        "selectionEnd": 24
+      }
+    },
+    {
+      "name": "unfinished clause does not dedent",
+      "initial": {
+        "text": "if ready:\n    els",
+        "selectionStart": 17,
+        "selectionEnd": 17
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "e"
+        }
+      ],
+      "expected": {
+        "text": "if ready:\n    else",
+        "selectionStart": 18,
+        "selectionEnd": 18
+      }
+    },
+    {
+      "name": "non-leading clause token does not dedent",
+      "initial": {
+        "text": "if ready:\n    value = else",
+        "selectionStart": 26,
+        "selectionEnd": 26
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": ":"
+        }
+      ],
+      "expected": {
+        "text": "if ready:\n    value = else:",
+        "selectionStart": 27,
+        "selectionEnd": 27
+      }
+    },
+    {
+      "name": "no opener means no clause dedent",
+      "initial": {
+        "text": "    else",
+        "selectionStart": 8,
+        "selectionEnd": 8
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": ":"
+        }
+      ],
+      "expected": {
+        "text": "    else:",
+        "selectionStart": 9,
+        "selectionEnd": 9
+      }
+    },
+    {
+      "name": "nested else dedents only one level",
+      "initial": {
+        "text": "if outer:\n    if inner:\n        work\n        else",
+        "selectionStart": 49,
+        "selectionEnd": 49
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": ":"
+        }
+      ],
+      "expected": {
+        "text": "if outer:\n    if inner:\n        work\n    else:",
+        "selectionStart": 46,
+        "selectionEnd": 46
+      }
+    },
+    {
+      "name": "manual clause reindent is not fought",
+      "initial": {
+        "text": "if ready:\n    work\n    else",
+        "selectionStart": 27,
+        "selectionEnd": 27
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": " "
+        },
+        {
+          "type": "command",
+          "command": "indent"
+        },
+        {
+          "type": "insert",
+          "text": ":"
+        }
+      ],
+      "expected": {
+        "text": "if ready:\n    work\n    else :",
+        "selectionStart": 29,
+        "selectionEnd": 29
+      }
+    },
+    {
+      "name": "retyping a clause delimiter after manual reindent is respected",
+      "initial": {
+        "text": "if ready:\n    work\n    else",
+        "selectionStart": 27,
+        "selectionEnd": 27
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": ":"
+        },
+        {
+          "type": "command",
+          "command": "indent"
+        },
+        {
+          "type": "command",
+          "command": "backspace"
+        },
+        {
+          "type": "insert",
+          "text": ":"
+        }
+      ],
+      "expected": {
+        "text": "if ready:\n    work\n    else:",
+        "selectionStart": 28,
+        "selectionEnd": 28
+      }
+    },
+    {
+      "name": "Backspace goes six spaces to four",
+      "initial": {
+        "text": "      work",
+        "selectionStart": 6,
+        "selectionEnd": 6
+      },
+      "operations": [
+        {
+          "type": "command",
+          "command": "backspace"
+        }
+      ],
+      "expected": {
+        "text": "    work",
+        "selectionStart": 4,
+        "selectionEnd": 4
+      }
+    },
+    {
+      "name": "Backspace removes one tab",
+      "initial": {
+        "text": "\t\twork",
+        "selectionStart": 2,
+        "selectionEnd": 2
+      },
+      "operations": [
+        {
+          "type": "command",
+          "command": "backspace"
+        }
+      ],
+      "expected": {
+        "text": "\twork",
+        "selectionStart": 1,
+        "selectionEnd": 1
+      }
+    },
+    {
+      "name": "mixed-width Backspace uses actual block columns",
+      "initial": {
+        "text": "if first:\n   if second:\n        work",
+        "selectionStart": 32,
+        "selectionEnd": 32
+      },
+      "operations": [
+        {
+          "type": "command",
+          "command": "backspace"
+        }
+      ],
+      "expected": {
+        "text": "if first:\n   if second:\n   work",
+        "selectionStart": 27,
+        "selectionEnd": 27
+      }
+    },
+    {
+      "name": "Backspace at zero joins lines",
+      "initial": {
+        "text": "first\n    second",
+        "selectionStart": 6,
+        "selectionEnd": 6
+      },
+      "operations": [
+        {
+          "type": "command",
+          "command": "backspace"
+        }
+      ],
+      "expected": {
+        "text": "first    second",
+        "selectionStart": 5,
+        "selectionEnd": 5
+      }
+    },
+    {
+      "name": "selected whitespace deletion is exact",
+      "initial": {
+        "text": "        work",
+        "selectionStart": 2,
+        "selectionEnd": 5
+      },
+      "operations": [
+        {
+          "type": "command",
+          "command": "backspace"
+        }
+      ],
+      "expected": {
+        "text": "     work",
+        "selectionStart": 2,
+        "selectionEnd": 2
+      }
+    },
+    {
+      "name": "platform backward deletion gets smart stops",
+      "initial": {
+        "text": "        work",
+        "selectionStart": 8,
+        "selectionEnd": 8
+      },
+      "operations": [
+        {
+          "type": "deleteBackward",
+          "count": 1
+        }
+      ],
+      "expected": {
+        "text": "    work",
+        "selectionStart": 4,
+        "selectionEnd": 4
+      }
+    },
+    {
+      "name": "platform multi-delete bypasses smart expansion",
+      "initial": {
+        "text": "        work",
+        "selectionStart": 8,
+        "selectionEnd": 8
+      },
+      "operations": [
+        {
+          "type": "deleteBackward",
+          "count": 3
+        }
+      ],
+      "expected": {
+        "text": "     work",
+        "selectionStart": 5,
+        "selectionEnd": 5
+      }
+    },
+    {
+      "name": "closing bracket types over its inserted mate",
+      "initial": {
+        "text": "",
+        "selectionStart": 0,
+        "selectionEnd": 0
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "(",
+          "expectedAfter": {
+            "text": "()",
+            "selectionStart": 1,
+            "selectionEnd": 1
+          }
+        },
+        {
+          "type": "insert",
+          "text": ")"
+        }
+      ],
+      "expected": {
+        "text": "()",
+        "selectionStart": 2,
+        "selectionEnd": 2
+      }
+    },
+    {
+      "name": "closing quote types over its inserted mate",
+      "initial": {
+        "text": "",
+        "selectionStart": 0,
+        "selectionEnd": 0
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "\"",
+          "expectedAfter": {
+            "text": "\"\"",
+            "selectionStart": 1,
+            "selectionEnd": 1
+          }
+        },
+        {
+          "type": "insert",
+          "text": "\""
+        }
+      ],
+      "expected": {
+        "text": "\"\"",
+        "selectionStart": 2,
+        "selectionEnd": 2
+      }
+    },
+    {
+      "name": "Backspace deletes an empty pair",
+      "initial": {
+        "text": "",
+        "selectionStart": 0,
+        "selectionEnd": 0
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "(",
+          "expectedAfter": {
+            "text": "()",
+            "selectionStart": 1,
+            "selectionEnd": 1
+          }
+        },
+        {
+          "type": "command",
+          "command": "backspace"
+        }
+      ],
+      "expected": {
+        "text": "",
+        "selectionStart": 0,
+        "selectionEnd": 0
+      }
+    },
+    {
+      "name": "triple quotes auto-close",
+      "initial": {
+        "text": "",
+        "selectionStart": 0,
+        "selectionEnd": 0
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "\""
+        },
+        {
+          "type": "insert",
+          "text": "\""
+        },
+        {
+          "type": "insert",
+          "text": "\""
+        }
+      ],
+      "expected": {
+        "text": "\"\"\"\"\"\"",
+        "selectionStart": 3,
+        "selectionEnd": 3
+      }
+    },
+    {
+      "name": "leaving blank indentation cleans it",
+      "initial": {
+        "text": "    \nnext",
+        "selectionStart": 4,
+        "selectionEnd": 4
+      },
+      "operations": [
+        {
+          "type": "selection",
+          "start": 9,
+          "end": 9
+        }
+      ],
+      "expected": {
+        "text": "\nnext",
+        "selectionStart": 5,
+        "selectionEnd": 5
+      }
+    },
+    {
+      "name": "current caret-line indentation remains",
+      "initial": {
+        "text": "    \nnext",
+        "selectionStart": 4,
+        "selectionEnd": 4
+      },
+      "operations": [
+        {
+          "type": "selection",
+          "start": 2,
+          "end": 2
+        }
+      ],
+      "expected": {
+        "text": "    \nnext",
+        "selectionStart": 2,
+        "selectionEnd": 2
+      }
+    },
+    {
+      "name": "composition preserves the exact platform value",
+      "initial": {
+        "text": "if ready:",
+        "selectionStart": 9,
+        "selectionEnd": 9
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "\n",
+          "composing": true
+        }
+      ],
+      "expected": {
+        "text": "if ready:\n",
+        "selectionStart": 10,
+        "selectionEnd": 10
+      },
+      "expectedComposing": {
+        "start": 9,
+        "end": 10
+      }
+    },
+    {
+      "name": "committed composition Enter applies indentation",
+      "initial": {
+        "text": "if read",
+        "selectionStart": 7,
+        "selectionEnd": 7
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "y:",
+          "composing": true
+        },
+        {
+          "type": "insert",
+          "text": "\n"
+        }
+      ],
+      "expected": {
+        "text": "if ready:\n    ",
+        "selectionStart": 14,
+        "selectionEnd": 14
+      }
+    },
+    {
+      "name": "paste on a blank line rebases a block",
+      "initial": {
+        "text": "if ready:\n    \nafter",
+        "selectionStart": 14,
+        "selectionEnd": 14
+      },
+      "operations": [
+        {
+          "type": "command",
+          "command": "paste",
+          "text": "        first\n            second"
+        }
+      ],
+      "expected": {
+        "text": "if ready:\n    first\n        second\nafter",
+        "selectionStart": 34,
+        "selectionEnd": 34
+      }
+    },
+    {
+      "name": "mid-line paste keeps first line inline",
+      "initial": {
+        "text": "    value = tail",
+        "selectionStart": 12,
+        "selectionEnd": 12
+      },
+      "operations": [
+        {
+          "type": "command",
+          "command": "paste",
+          "text": "one\n    two"
+        }
+      ],
+      "expected": {
+        "text": "    value = one\n    twotail",
+        "selectionStart": 23,
+        "selectionEnd": 23
+      }
+    },
+    {
+      "name": "paste common indentation includes an unindented first source line",
+      "initial": {
+        "text": "    ",
+        "selectionStart": 4,
+        "selectionEnd": 4
+      },
+      "operations": [
+        {
+          "type": "command",
+          "command": "paste",
+          "text": "first\n        second\n            third"
+        }
+      ],
+      "expected": {
+        "text": "    first\n            second\n                third",
+        "selectionStart": 50,
+        "selectionEnd": 50
+      }
+    },
+    {
+      "name": "paste normalizes tabs into configured spaces",
+      "initial": {
+        "text": "    ",
+        "selectionStart": 4,
+        "selectionEnd": 4
+      },
+      "operations": [
+        {
+          "type": "command",
+          "command": "paste",
+          "text": "\tfirst\n\t\tsecond"
+        }
+      ],
+      "expected": {
+        "text": "    first\n            second",
+        "selectionStart": 28,
+        "selectionEnd": 28
+      },
+      "options": {
+        "projectUsesTabs": false
+      }
+    },
+    {
+      "name": "paste applies a project tab-style override",
+      "initial": {
+        "text": "        ",
+        "selectionStart": 8,
+        "selectionEnd": 8
+      },
+      "operations": [
+        {
+          "type": "command",
+          "command": "paste",
+          "text": "\tfirst\n\t\tsecond"
+        }
+      ],
+      "expected": {
+        "text": "        first\n\t\tsecond",
+        "selectionStart": 22,
+        "selectionEnd": 22
+      },
+      "options": {
+        "projectUsesTabs": true
+      }
+    },
+    {
+      "name": "multi-character selection replacement retains its matching prefix",
+      "initial": {
+        "text": "    same",
+        "selectionStart": 4,
+        "selectionEnd": 8
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "same\n    tail"
+        }
+      ],
+      "expected": {
+        "text": "    same\n        tail",
+        "selectionStart": 21,
+        "selectionEnd": 21
+      }
+    },
+    {
+      "name": "paste normalizes odd leading spaces",
+      "initial": {
+        "text": "    ",
+        "selectionStart": 4,
+        "selectionEnd": 4
+      },
+      "operations": [
+        {
+          "type": "command",
+          "command": "paste",
+          "text": " first\n　second"
+        }
+      ],
+      "expected": {
+        "text": "    first\n    second",
+        "selectionStart": 20,
+        "selectionEnd": 20
+      }
+    },
+    {
+      "name": "paste normalizes line endings",
+      "initial": {
+        "text": "first\r\n    ",
+        "selectionStart": 11,
+        "selectionEnd": 11
+      },
+      "operations": [
+        {
+          "type": "command",
+          "command": "paste",
+          "text": "a\nb\rc"
+        }
+      ],
+      "expected": {
+        "text": "first\r\n    a\r\n    b\r\n    c",
+        "selectionStart": 26,
+        "selectionEnd": 26
+      }
+    },
+    {
+      "name": "plain paste preserves original indentation and endings",
+      "initial": {
+        "text": "    ",
+        "selectionStart": 4,
+        "selectionEnd": 4
+      },
+      "operations": [
+        {
+          "type": "command",
+          "command": "paste",
+          "text": "  one\r\n\tsecond",
+          "reindent": false
+        }
+      ],
+      "expected": {
+        "text": "      one\r\n\tsecond",
+        "selectionStart": 18,
+        "selectionEnd": 18
+      }
+    },
+    {
+      "name": "multi-character trailing spaces are preserved",
+      "initial": {
+        "text": "    ",
+        "selectionStart": 4,
+        "selectionEnd": 4
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "hello "
+        }
+      ],
+      "expected": {
+        "text": "    hello ",
+        "selectionStart": 10,
+        "selectionEnd": 10
+      }
+    },
+    {
+      "name": "indent conversion preserves multiline string contents",
+      "initial": {
+        "text": "def f():\n\ttext = \"\"\"\n\tdata\n\t\"\"\"\n\tcall(\n\t\tvalue)",
+        "selectionStart": 47,
+        "selectionEnd": 47
+      },
+      "operations": [
+        {
+          "type": "command",
+          "command": "convertIndentation",
+          "indentSize": 4,
+          "usesTabs": false
+        }
+      ],
+      "expected": {
+        "text": "def f():\n    text = \"\"\"\n\tdata\n\t\"\"\"\n    call(\n        value)",
+        "selectionStart": 59,
+        "selectionEnd": 59
+      }
+    },
+    {
+      "name": "protected prefix is never changed by a whole-line action",
+      "initial": {
+        "text": "protected text",
+        "selectionStart": 9,
+        "selectionEnd": 9
+      },
+      "operations": [
+        {
+          "type": "command",
+          "command": "indent"
+        }
+      ],
+      "expected": {
+        "text": "protected text",
+        "selectionStart": 9,
+        "selectionEnd": 9
+      },
+      "bounds": {
+        "start": 9,
+        "end": 14
+      }
+    },
+    {
+      "name": "editable body inherits read-only header context",
+      "initial": {
+        "text": "if ready:\n    if nested:\nprotected",
+        "selectionStart": 24,
+        "selectionEnd": 24
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "\n"
+        }
+      ],
+      "expected": {
+        "text": "if ready:\n    if nested:\n        \nprotected",
+        "selectionStart": 33,
+        "selectionEnd": 33
+      },
+      "bounds": {
+        "start": 10,
+        "end": 24
+      }
+    },
+    {
+      "name": "native period-space substitution restores indentation",
+      "initial": {
+        "text": "    ",
+        "selectionStart": 2,
+        "selectionEnd": 4
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": ". "
+        }
+      ],
+      "expected": {
+        "text": "    ",
+        "selectionStart": 4,
+        "selectionEnd": 4
+      }
+    },
+    {
+      "name": "incoming smart delimiters normalize outside literals",
+      "initial": {
+        "text": "message = ",
+        "selectionStart": 10,
+        "selectionEnd": 10
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "“camp”"
+        }
+      ],
+      "expected": {
+        "text": "message = \"camp\"",
+        "selectionStart": 16,
+        "selectionEnd": 16
+      }
+    },
+    {
+      "name": "curly quote data inside a valid string remains unchanged",
+      "initial": {
+        "text": "message = \"\"",
+        "selectionStart": 11,
+        "selectionEnd": 11
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "a “quote”"
+        }
+      ],
+      "expected": {
+        "text": "message = \"a “quote”\"",
+        "selectionStart": 20,
+        "selectionEnd": 20
+      }
+    },
+    {
+      "name": "curly apostrophe data inside a smart-delimited string remains unchanged",
+      "initial": {
+        "text": "message = ",
+        "selectionStart": 10,
+        "selectionEnd": 10
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "“don’t”"
+        }
+      ],
+      "expected": {
+        "text": "message = \"don’t\"",
+        "selectionStart": 17,
+        "selectionEnd": 17
+      }
+    },
+    {
+      "name": "quoted punctuation in a comment remains unchanged",
+      "initial": {
+        "text": "# ",
+        "selectionStart": 2,
+        "selectionEnd": 2
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "“camp”"
+        }
+      ],
+      "expected": {
+        "text": "# “camp”",
+        "selectionStart": 8,
+        "selectionEnd": 8
+      }
+    },
+    {
+      "name": "unfinished composition preserves smart quote candidates",
+      "initial": {
+        "text": "message = ",
+        "selectionStart": 10,
+        "selectionEnd": 10
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "“camp”",
+          "composing": true
+        }
+      ],
+      "expected": {
+        "text": "message = “camp”",
+        "selectionStart": 16,
+        "selectionEnd": 16
+      },
+      "expectedComposing": {
+        "start": 10,
+        "end": 16
+      }
+    },
+    {
+      "name": "incomplete terminal expression preserves indentation",
+      "initial": {
+        "text": "    return value +",
+        "selectionStart": 18,
+        "selectionEnd": 18
+      },
+      "operations": [
+        {
+          "type": "command",
+          "command": "enter"
+        }
+      ],
+      "expected": {
+        "text": "    return value +\n    ",
+        "selectionStart": 23,
+        "selectionEnd": 23
+      }
+    },
+    {
+      "name": "complete terminal form dedents return first,",
+      "initial": {
+        "text": "    return first,",
+        "selectionStart": 17,
+        "selectionEnd": 17
+      },
+      "operations": [
+        {
+          "type": "command",
+          "command": "enter"
+        }
+      ],
+      "expected": {
+        "text": "    return first,\n",
+        "selectionStart": 18,
+        "selectionEnd": 18
+      }
+    },
+    {
+      "name": "unfinished terminal token preserves indentation return not",
+      "initial": {
+        "text": "    return not",
+        "selectionStart": 14,
+        "selectionEnd": 14
+      },
+      "operations": [
+        {
+          "type": "command",
+          "command": "enter"
+        }
+      ],
+      "expected": {
+        "text": "    return not\n    ",
+        "selectionStart": 19,
+        "selectionEnd": 19
+      }
+    },
+    {
+      "name": "unfinished terminal token preserves indentation raise Error from",
+      "initial": {
+        "text": "    raise Error from",
+        "selectionStart": 20,
+        "selectionEnd": 20
+      },
+      "operations": [
+        {
+          "type": "command",
+          "command": "enter"
+        }
+      ],
+      "expected": {
+        "text": "    raise Error from\n    ",
+        "selectionStart": 25,
+        "selectionEnd": 25
+      }
+    },
+    {
+      "name": "individual smart quote keys preserve automatic pair behavior",
+      "initial": {
+        "text": "message = ",
+        "selectionStart": 10,
+        "selectionEnd": 10
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "“",
+          "expectedAfter": {
+            "text": "message = \"\"",
+            "selectionStart": 11,
+            "selectionEnd": 11
+          }
+        },
+        {
+          "type": "insert",
+          "text": "camp",
+          "expectedAfter": {
+            "text": "message = \"camp\"",
+            "selectionStart": 15,
+            "selectionEnd": 15
+          }
+        },
+        {
+          "type": "insert",
+          "text": "”"
+        }
+      ],
+      "expected": {
+        "text": "message = \"camp\"",
+        "selectionStart": 16,
+        "selectionEnd": 16
+      }
+    },
+    {
+      "name": "escaped smart delimiters retain the enclosing string",
+      "initial": {
+        "text": "message = ",
+        "selectionStart": 10,
+        "selectionEnd": 10
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "“say \\”hi\\””"
+        }
+      ],
+      "expected": {
+        "text": "message = \"say \\\"hi\\\"\"",
+        "selectionStart": 22,
+        "selectionEnd": 22
+      }
+    },
+    {
+      "name": "atomic completed clause batch does not trigger character dedent",
+      "initial": {
+        "text": "if ready:\n    ",
+        "selectionStart": 14,
+        "selectionEnd": 14
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "else:"
+        }
+      ],
+      "expected": {
+        "text": "if ready:\n    else:",
+        "selectionStart": 19,
+        "selectionEnd": 19
+      }
+    },
+    {
+      "name": "atomic multiline batch rebases actual common indentation",
+      "initial": {
+        "text": "if ready:\n    ",
+        "selectionStart": 14,
+        "selectionEnd": 14
+      },
+      "operations": [
+        {
+          "type": "insert",
+          "text": "  camp\n      fire"
+        }
+      ],
+      "expected": {
+        "text": "if ready:\n    camp\n        fire",
+        "selectionStart": 31,
+        "selectionEnd": 31
+      }
+    }
+  ]
+}
